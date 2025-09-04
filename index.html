@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Allocation Buddy - Dashboard</title>
+  <title>Inventory Sorter - Compact Dashboard</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <style>
     * { margin:0; padding:0; box-sizing:border-box; }
@@ -206,7 +206,7 @@
 <body class="dark-mode">
   <div class="container">
     <div class="header">
-      <h1>Allocation Buddy</h1>
+      <h1>Inventory Sorter</h1>
       <p>Compact dashboard for sorting inventory by store destination</p>
       <div class="dark-mode-toggle">
         <span class="toggle-icon" id="modeIcon">🌙</span>
@@ -218,7 +218,7 @@
       <!-- Sidebar -->
       <div class="sidebar">
         <div class="card">
-          <h3>🏪 Store Management</h3>
+          <h3>🪪 Store Management</h3>
           <div class="import-tabs">
             <button class="import-tab active" onclick="switchStoreTab(event,'manage')">📋 Manage Stores</button>
             <button class="import-tab" onclick="switchStoreTab(event,'add')">➕ Add Store</button>
@@ -358,6 +358,7 @@
     let itemsToSort = [];
     let lastResults = null; // for Export / Copy & target stores
     let redistributionDeltas = {}; // "item|storeCode" -> qty added by last redistribution
+    let currentWorkbook = null; // Store workbook for sheet/column selection
 
     // collapsible + copied state per store
     const collapsedStores = {}; // storeCode -> boolean
@@ -511,36 +512,223 @@
     function selectAllStores(){ allStores.forEach(s => s.active = true); updateStoreStatus(); updateDistributeButtonState(); }
     function deselectAllStores(){ allStores.forEach(s => s.active = false); updateStoreStatus(); updateDistributeButtonState(); }
 
-    // --- Import handling ---
+    // --- Enhanced Import handling ---
     function handleFileUpload(event) {
       const file = event.target.files[0];
       if (!file) return;
+      
+      document.getElementById('fileStatus').innerHTML = '📊 Reading file...';
+      
       const reader = new FileReader();
       reader.onload = (e) => {
         try {
           const data = new Uint8Array(e.target.result);
-          const workbook = XLSX.read(data, { type:'array' });
-          const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-          const rows = XLSX.utils.sheet_to_json(firstSheet, { header:1, defval:'' });
-          let imported = 0;
-          rows.forEach((row, idx) => {
-            if (idx === 0 && typeof row[0] === 'string' && row[0].toLowerCase().includes('item')) return;
-            const itemNumber = String(row[0] || '').trim();
-            const quantity = parseInt(row[1], 10);
-            const storeCode = String(row[2] || '').trim();
-            if (itemNumber && Number.isFinite(quantity) && quantity > 0 && storeCode) {
-              itemsToSort.push({ itemNumber, quantity, storeCode, source:'Excel' });
-              imported++;
-            }
-          });
-          document.getElementById('fileStatus').innerHTML = `✅ Imported ${imported} items`;
-          updateImportDisplay();
+          currentWorkbook = XLSX.read(data, { type:'array', cellDates: true, dateNF: 'yyyy-mm-dd' });
+          
+          if (currentWorkbook.SheetNames.length === 1) {
+            // Single sheet - proceed with import
+            importFromSheet(currentWorkbook.SheetNames[0]);
+          } else {
+            // Multiple sheets - let user choose
+            showSheetSelector();
+          }
         } catch (err) {
-          document.getElementById('fileStatus').innerHTML = `❌ Error: ${err.message}`;
+          document.getElementById('fileStatus').innerHTML = `❌ Error reading file: ${err.message}`;
         }
       };
       reader.readAsArrayBuffer(file);
     }
+
+    function showSheetSelector() {
+      const sheetOptions = currentWorkbook.SheetNames
+        .map(name => `<option value="${name}">${name}</option>`)
+        .join('');
+      
+      document.getElementById('fileStatus').innerHTML = `
+        <div style="margin: 10px 0;">
+          <label style="display: block; margin-bottom: 5px; font-weight: 500;">Select Sheet to Import:</label>
+          <div style="display: flex; gap: 10px; align-items: center;">
+            <select id="sheetSelector" style="flex: 1; padding: 6px; border: 1px solid #ddd; border-radius: 4px;">
+              ${sheetOptions}
+            </select>
+            <button class="big-button" onclick="importSelectedSheet()" style="padding: 6px 12px; font-size: 12px;">Import</button>
+          </div>
+          <button class="big-button" onclick="showColumnMapper()" style="margin-top: 8px; width: 100%; font-size: 12px;">Advanced Import (Column Mapping)</button>
+        </div>`;
+    }
+
+    function importSelectedSheet() {
+      const selector = document.getElementById('sheetSelector');
+      if (selector) {
+        importFromSheet(selector.value);
+      }
+    }
+
+    function importFromSheet(sheetName, columnMapping = null) {
+      try {
+        const worksheet = currentWorkbook.Sheets[sheetName];
+        const rows = XLSX.utils.sheet_to_json(worksheet, { header:1, defval:'', raw: false });
+        
+        if (rows.length === 0) {
+          document.getElementById('fileStatus').innerHTML = '⚠️ Sheet is empty';
+          return;
+        }
+
+        // Auto-detect headers if no column mapping provided
+        let headerRow = -1;
+        let itemCol = 0, qtyCol = 1, storeCol = 2;
+        
+        if (!columnMapping) {
+          // Look for header row
+          for (let i = 0; i < Math.min(5, rows.length); i++) {
+            const row = rows[i];
+            const hasItemHeader = row.some(cell => 
+              String(cell).toLowerCase().match(/(item|part|product|nsn|sku)/));
+            const hasQtyHeader = row.some(cell => 
+              String(cell).toLowerCase().match(/(qty|quantity|amount|count)/));
+            const hasStoreHeader = row.some(cell => 
+              String(cell).toLowerCase().match(/(store|location|dest|code)/));
+            
+            if (hasItemHeader || hasQtyHeader || hasStoreHeader) {
+              headerRow = i;
+              // Find column positions
+              row.forEach((cell, idx) => {
+                const cellStr = String(cell).toLowerCase();
+                if (cellStr.match(/(item|part|product|nsn|sku)/) && itemCol === 0) itemCol = idx;
+                if (cellStr.match(/(qty|quantity|amount|count)/) && qtyCol === 1) qtyCol = idx;
+                if (cellStr.match(/(store|location|dest|code)/) && storeCol === 2) storeCol = idx;
+              });
+              break;
+            }
+          }
+        } else {
+          itemCol = columnMapping.itemCol;
+          qtyCol = columnMapping.qtyCol;
+          storeCol = columnMapping.storeCol;
+          headerRow = columnMapping.headerRow;
+        }
+
+        let imported = 0;
+        let skipped = 0;
+        const errors = [];
+        
+        rows.forEach((row, idx) => {
+          if (idx <= headerRow) return; // Skip header row(s)
+          
+          const itemNumber = String(row[itemCol] || '').trim();
+          const quantityRaw = row[qtyCol];
+          const storeCode = String(row[storeCol] || '').trim().replace(/^0+/, ''); // Remove leading zeros
+          
+          // Parse quantity more robustly
+          let quantity = 0;
+          if (typeof quantityRaw === 'number') {
+            quantity = quantityRaw;
+          } else {
+            const qtyStr = String(quantityRaw).replace(/[^\d.-]/g, ''); // Remove non-numeric chars except . and -
+            quantity = parseFloat(qtyStr);
+          }
+          
+          if (!itemNumber || !Number.isFinite(quantity) || quantity <= 0 || !storeCode) {
+            if (itemNumber || quantityRaw || storeCode) { // Only count as error if row has some data
+              skipped++;
+              errors.push(`Row ${idx + 1}: Invalid data (Item: "${itemNumber}", Qty: "${quantityRaw}", Store: "${storeCode}")`);
+            }
+            return;
+          }
+          
+          itemsToSort.push({ 
+            itemNumber: itemNumber.toUpperCase(), 
+            quantity: Math.floor(quantity), // Ensure integer
+            storeCode: storeCode, 
+            source: `Excel (${sheetName})` 
+          });
+          imported++;
+        });
+
+        let statusMsg = `✅ Imported ${imported} items from "${sheetName}"`;
+        if (skipped > 0) {
+          statusMsg += ` (${skipped} rows skipped)`;
+        }
+        if (errors.length > 0 && errors.length <= 5) {
+          statusMsg += `<div style="font-size: 11px; color: #666; margin-top: 5px;">Issues: ${errors.join('; ')}</div>`;
+        } else if (errors.length > 5) {
+          statusMsg += `<div style="font-size: 11px; color: #666; margin-top: 5px;">${errors.length} rows had issues</div>`;
+        }
+        
+        document.getElementById('fileStatus').innerHTML = statusMsg;
+        updateImportDisplay();
+      } catch (err) {
+        document.getElementById('fileStatus').innerHTML = `❌ Import error: ${err.message}`;
+      }
+    }
+
+    function showColumnMapper() {
+      const sheetName = document.getElementById('sheetSelector').value;
+      const worksheet = currentWorkbook.Sheets[sheetName];
+      const rows = XLSX.utils.sheet_to_json(worksheet, { header:1, defval:'', raw: false });
+      
+      if (rows.length === 0) return;
+      
+      // Show preview of first few rows for column mapping
+      const previewRows = rows.slice(0, 5);
+      let previewHtml = `
+        <div style="margin: 10px 0;">
+          <h4>Column Mapping for "${sheetName}"</h4>
+          <div style="background: #f5f5f5; padding: 8px; border-radius: 4px; margin: 8px 0; max-height: 150px; overflow: auto;">
+            <table style="width: 100%; font-size: 11px; border-collapse: collapse;">
+              ${previewRows.map((row, idx) => `
+                <tr style="border-bottom: 1px solid #ddd;">
+                  <td style="padding: 2px 4px; font-weight: bold; background: #eee;">${idx + 1}</td>
+                  ${row.slice(0, 10).map((cell, colIdx) => `
+                    <td style="padding: 2px 4px;" title="Column ${String.fromCharCode(65 + colIdx)}: ${String(cell)}">${String(cell).substring(0, 15)}</td>
+                  `).join('')}
+                </tr>
+              `).join('')}
+            </table>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 8px 0;">
+            <div>
+              <label style="font-size: 12px; font-weight: 500;">Item Column:</label>
+              <select id="itemColSelect" style="width: 100%; padding: 4px;">
+                ${rows[0].map((_, idx) => `<option value="${idx}">Column ${String.fromCharCode(65 + idx)} (${String(rows[0][idx]).substring(0, 10)})</option>`).join('')}
+              </select>
+            </div>
+            <div>
+              <label style="font-size: 12px; font-weight: 500;">Quantity Column:</label>
+              <select id="qtyColSelect" style="width: 100%; padding: 4px;">
+                ${rows[0].map((_, idx) => `<option value="${idx}" ${idx === 1 ? 'selected' : ''}>Column ${String.fromCharCode(65 + idx)} (${String(rows[0][idx]).substring(0, 10)})</option>`).join('')}
+              </select>
+            </div>
+            <div>
+              <label style="font-size: 12px; font-weight: 500;">Store Column:</label>
+              <select id="storeColSelect" style="width: 100%; padding: 4px;">
+                ${rows[0].map((_, idx) => `<option value="${idx}" ${idx === 2 ? 'selected' : ''}>Column ${String.fromCharCode(65 + idx)} (${String(rows[0][idx]).substring(0, 10)})</option>`).join('')}
+              </select>
+              <div style="font-size: 10px; color: #666; margin-top: 2px;">Accepts store codes or names</div>
+            </div>
+          </div>
+          <div style="margin: 8px 0;">
+            <label style="font-size: 12px; font-weight: 500;">Header Row (skip this many rows):</label>
+            <input type="number" id="headerRowInput" value="0" min="0" max="10" style="width: 60px; padding: 4px;">
+          </div>
+          <button class="big-button success" onclick="importWithMapping()" style="width: 100%; font-size: 12px;">Import with Custom Mapping</button>
+        </div>`;
+      
+      document.getElementById('fileStatus').innerHTML = previewHtml;
+    }
+
+    function importWithMapping() {
+      const sheetName = document.getElementById('sheetSelector').value;
+      const columnMapping = {
+        itemCol: parseInt(document.getElementById('itemColSelect').value),
+        qtyCol: parseInt(document.getElementById('qtyColSelect').value),
+        storeCol: parseInt(document.getElementById('storeColSelect').value),
+        headerRow: parseInt(document.getElementById('headerRowInput').value) - 1 // Convert to 0-based
+      };
+      
+      importFromSheet(sheetName, columnMapping);
+    }
+
     function processPastedData() {
       const pasteData = document.getElementById('pasteArea').value.trim();
       if (!pasteData) { alert('Please paste some data first'); return; }
@@ -926,29 +1114,234 @@
       updateDistributeButtonState();
     }
 
-    // --- Excel export: single sheet (All Stores) + Issues sheet ---
+    // --- Enhanced Excel export with multiple format options ---
     function exportResults() {
+      if (!lastResults && itemsToSort.length === 0) {
+        alert('No data to export. Please import and sort items first.');
+        return;
+      }
+      
+      // Show export options dialog
+      showExportDialog();
+    }
+
+    function showExportDialog() {
+      const existingDialog = document.getElementById('exportDialog');
+      if (existingDialog) existingDialog.remove();
+      
+      const dialog = document.createElement('div');
+      dialog.id = 'exportDialog';
+      dialog.style.cssText = `
+        position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+        background: var(--light); border: 2px solid #ddd; border-radius: 12px;
+        padding: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+        z-index: 10000; min-width: 400px; max-width: 500px;
+      `;
+      
+      dialog.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+          <h3 style="margin: 0; color: var(--pink-1);">📊 Export Options</h3>
+          <button onclick="closeExportDialog()" style="background: none; border: none; font-size: 20px; cursor: pointer; color: #666;">×</button>
+        </div>
+        
+        <div style="margin-bottom: 15px;">
+          <label style="display: block; font-weight: 500; margin-bottom: 8px;">Export Format:</label>
+          <div style="display: grid; gap: 8px;">
+            <label style="display: flex; align-items: center; gap: 8px; font-size: 14px;">
+              <input type="radio" name="exportFormat" value="combined" checked> Combined (All stores in one sheet)
+            </label>
+            <label style="display: flex; align-items: center; gap: 8px; font-size: 14px;">
+              <input type="radio" name="exportFormat" value="separate"> Separate Sheets (One sheet per store)
+            </label>
+            <label style="display: flex; align-items: center; gap: 8px; font-size: 14px;">
+              <input type="radio" name="exportFormat" value="summary"> Summary Only (Store totals and statistics)
+            </label>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 15px;">
+          <label style="display: block; font-weight: 500; margin-bottom: 8px;">Include:</label>
+          <div style="display: grid; gap: 5px;">
+            <label style="display: flex; align-items: center; gap: 8px; font-size: 14px;">
+              <input type="checkbox" id="includeIssues" checked> Issues/Problems
+            </label>
+            <label style="display: flex; align-items: center; gap: 8px; font-size: 14px;">
+              <input type="checkbox" id="includeTimestamp" checked> Timestamp
+            </label>
+            <label style="display: flex; align-items: center; gap: 8px; font-size: 14px;">
+              <input type="checkbox" id="includeRedistribution" checked> Redistribution Data
+            </label>
+            <label style="display: flex; align-items: center; gap: 8px; font-size: 14px;">
+              <input type="checkbox" id="includeStoreInfo" checked> Store Details (Names, Ranks)
+            </label>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 15px;">
+          <label style="display: block; font-weight: 500; margin-bottom: 5px;">Filename:</label>
+          <input type="text" id="exportFilename" value="Inventory_Sorting" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px;">
+          <div style="font-size: 12px; color: #666; margin-top: 2px;">Timestamp will be added automatically</div>
+        </div>
+
+        <div style="display: flex; gap: 10px; justify-content: flex-end;">
+          <button class="big-button" onclick="closeExportDialog()">Cancel</button>
+          <button class="big-button success" onclick="performExport()">Export Excel</button>
+        </div>
+      `;
+
+      // Add backdrop
+      const backdrop = document.createElement('div');
+      backdrop.style.cssText = `
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.5); z-index: 9999;
+      `;
+      backdrop.onclick = closeExportDialog;
+
+      document.body.appendChild(backdrop);
+      document.body.appendChild(dialog);
+
+      // Apply dark mode styles if active
+      if (document.body.classList.contains('dark-mode')) {
+        dialog.style.background = '#1a1a1a';
+        dialog.style.color = '#fce4ec';
+        dialog.style.borderColor = '#333';
+      }
+    }
+
+    function closeExportDialog() {
+      const dialog = document.getElementById('exportDialog');
+      const backdrop = document.querySelector('div[style*="position: fixed"][style*="rgba(0,0,0,0.5)"]');
+      if (dialog) dialog.remove();
+      if (backdrop) backdrop.remove();
+    }
+
+    function performExport() {
+      const format = document.querySelector('input[name="exportFormat"]:checked').value;
+      const includeIssues = document.getElementById('includeIssues').checked;
+      const includeTimestamp = document.getElementById('includeTimestamp').checked;
+      const includeRedistribution = document.getElementById('includeRedistribution').checked;
+      const includeStoreInfo = document.getElementById('includeStoreInfo').checked;
+      const filename = document.getElementById('exportFilename').value.trim() || 'Inventory_Sorting';
+
+      closeExportDialog();
+
       const wb = XLSX.utils.book_new();
       const now = new Date();
       const pad = (n)=> String(n).padStart(2,'0');
       const stamp = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}`;
 
-      const dataSource = lastResults ? lastResults : (function quickGroup(){
-        const issues = [];
-        const storeGroups = {};
-        itemsToSort.forEach(item=>{
-          const store = allStores.find(s=>String(s.code)===String(item.storeCode));
-          if(!store){ issues.push({type:'not_found',...item,message:`Store ${item.storeCode} not found`}); return; }
-          if(!store.active){ issues.push({type:'inactive',...item,storeName:store.name,message:`Store ${item.storeCode} - ${store.name} is inactive`}); return; }
-          const key = String(store.code);
-          if(!storeGroups[key]) storeGroups[key] = { storeCode:key, storeName:store.name, rank:store.rank, items:[], totalQuantity:0 };
-          storeGroups[key].items.push({ itemNumber:item.itemNumber, quantity:item.quantity, storeCode:key, storeName:store.name, rank:store.rank });
-          storeGroups[key].totalQuantity += item.quantity;
-        });
-        return { sortedStores: sortStoresNumerically(Object.values(storeGroups)), issues, validItems: [] };
-      })();
+      const dataSource = lastResults ? lastResults : generateQuickResults();
 
-      const rows = [['Store Code','Store Name','Rank','Item','Qty']];
+      if (format === 'combined') {
+        exportCombinedFormat(wb, dataSource, includeStoreInfo, includeRedistribution);
+      } else if (format === 'separate') {
+        exportSeparateFormat(wb, dataSource, includeStoreInfo, includeRedistribution);
+      } else if (format === 'summary') {
+        exportSummaryFormat(wb, dataSource, includeStoreInfo);
+      }
+
+      // Add issues sheet
+      if (includeIssues && dataSource.issues && dataSource.issues.length > 0) {
+        const issuesRows = [['Item Number','Quantity','Store Code','Issue Type','Description']];
+        dataSource.issues.forEach(issue => {
+          issuesRows.push([
+            issue.itemNumber, 
+            issue.quantity, 
+            issue.storeCode, 
+            issue.type,
+            issue.message
+          ]);
+        });
+        const wsIssues = XLSX.utils.aoa_to_sheet(issuesRows);
+        applySheetStyling(wsIssues, issuesRows[0].length);
+        XLSX.utils.book_append_sheet(wb, wsIssues, 'Issues');
+      }
+
+      // Add metadata sheet if timestamp requested
+      if (includeTimestamp) {
+        const metaRows = [
+          ['Export Information', ''],
+          ['Generated', now.toLocaleString()],
+          ['Total Items Processed', (dataSource.validItems?.length || 0) + (dataSource.issues?.length || 0)],
+          ['Active Stores', dataSource.sortedStores?.length || 0],
+          ['Issues Found', dataSource.issues?.length || 0],
+          ['Redistribution Applied', Object.keys(redistributionDeltas).length > 0 ? 'Yes' : 'No'],
+          ['', ''],
+          ['Store Summary', ''],
+          ['Store Code', 'Store Name', 'Rank', 'Items', 'Total Qty']
+        ];
+        
+        if (dataSource.sortedStores) {
+          dataSource.sortedStores.forEach(store => {
+            metaRows.push([
+              store.storeCode,
+              store.storeName,
+              store.rank,
+              store.items.length,
+              store.totalQuantity
+            ]);
+          });
+        }
+
+        const wsMeta = XLSX.utils.aoa_to_sheet(metaRows);
+        applySheetStyling(wsMeta, 5);
+        XLSX.utils.book_append_sheet(wb, wsMeta, 'Export Info');
+      }
+
+      const finalFilename = includeTimestamp ? `${filename}_${stamp}.xlsx` : `${filename}.xlsx`;
+      XLSX.writeFile(wb, finalFilename);
+    }
+
+    function generateQuickResults() {
+      const issues = [];
+      const storeGroups = {};
+      
+      itemsToSort.forEach(item => {
+        const store = allStores.find(s => String(s.code) === String(item.storeCode));
+        if (!store) {
+          issues.push({type:'not_found', ...item, message:`Store ${item.storeCode} not found`});
+          return;
+        }
+        if (!store.active) {
+          issues.push({type:'inactive', ...item, storeName:store.name, message:`Store ${item.storeCode} - ${store.name} is inactive`});
+          return;
+        }
+        
+        const key = String(store.code);
+        if (!storeGroups[key]) {
+          storeGroups[key] = { 
+            storeCode: key, 
+            storeName: store.name, 
+            rank: store.rank, 
+            items: [], 
+            totalQuantity: 0 
+          };
+        }
+        storeGroups[key].items.push({ 
+          itemNumber: item.itemNumber, 
+          quantity: item.quantity, 
+          storeCode: key, 
+          storeName: store.name, 
+          rank: store.rank 
+        });
+        storeGroups[key].totalQuantity += item.quantity;
+      });
+      
+      return { 
+        sortedStores: sortStoresNumerically(Object.values(storeGroups)), 
+        issues, 
+        validItems: Object.values(storeGroups).flatMap(s => s.items)
+      };
+    }
+
+    function exportCombinedFormat(wb, dataSource, includeStoreInfo, includeRedistribution) {
+      const headers = ['Store Code'];
+      if (includeStoreInfo) headers.push('Store Name', 'Rank');
+      headers.push('Item Number', 'Quantity');
+      if (includeRedistribution) headers.push('Redistributed Qty');
+
+      const rows = [headers];
+      
       if (dataSource.sortedStores && dataSource.sortedStores.length > 0) {
         dataSource.sortedStores
           .slice()
@@ -956,24 +1349,109 @@
           .forEach(store => {
             store.items
               .slice()
-              .sort((a,b)=> a.itemNumber.localeCompare(b.itemNumber))
-              .forEach(it => rows.push([store.storeCode, store.storeName, store.rank, it.itemNumber, it.quantity]));
+              .sort((a,b) => a.itemNumber.localeCompare(b.itemNumber))
+              .forEach(item => {
+                const row = [store.storeCode];
+                if (includeStoreInfo) row.push(store.storeName, store.rank);
+                row.push(item.itemNumber, item.quantity);
+                if (includeRedistribution) {
+                  const redistributedQty = redistributionDeltas[`${item.itemNumber}|${store.storeCode}`] || 0;
+                  row.push(redistributedQty);
+                }
+                rows.push(row);
+              });
           });
-      } else {
-        rows.push(['—','—','—','No data to export','']);
       }
 
       const wsAll = XLSX.utils.aoa_to_sheet(rows);
+      applySheetStyling(wsAll, headers.length);
       XLSX.utils.book_append_sheet(wb, wsAll, 'All Stores');
+    }
 
-      if (dataSource.issues && dataSource.issues.length > 0) {
-        const issuesRows = [['Item','Qty','Store Code','Issue']];
-        dataSource.issues.forEach(i=> issuesRows.push([i.itemNumber, i.quantity, i.storeCode, i.message]));
-        const wsIssues = XLSX.utils.aoa_to_sheet(issuesRows);
-        XLSX.utils.book_append_sheet(wb, wsIssues, 'Issues');
+    function exportSeparateFormat(wb, dataSource, includeStoreInfo, includeRedistribution) {
+      if (!dataSource.sortedStores || dataSource.sortedStores.length === 0) return;
+
+      dataSource.sortedStores
+        .slice()
+        .sort((a,b) => (parseInt(String(a.storeCode))||999999) - (parseInt(String(b.storeCode))||999999))
+        .forEach(store => {
+          const headers = ['Item Number', 'Quantity'];
+          if (includeRedistribution) headers.push('Redistributed Qty');
+          
+          const rows = [
+            [`Store: ${store.storeCode}${includeStoreInfo ? ` - ${store.storeName}` : ''}`],
+            includeStoreInfo ? [`Rank: ${store.rank}`, `Total Items: ${store.items.length}`, `Total Quantity: ${store.totalQuantity}`] : [],
+            [''], // Empty row
+            headers
+          ].filter(row => row.length > 0);
+
+          store.items
+            .slice()
+            .sort((a,b) => a.itemNumber.localeCompare(b.itemNumber))
+            .forEach(item => {
+              const row = [item.itemNumber, item.quantity];
+              if (includeRedistribution) {
+                const redistributedQty = redistributionDeltas[`${item.itemNumber}|${store.storeCode}`] || 0;
+                row.push(redistributedQty);
+              }
+              rows.push(row);
+            });
+
+          const ws = XLSX.utils.aoa_to_sheet(rows);
+          applySheetStyling(ws, Math.max(...rows.map(r => r.length)));
+          const sheetName = `${store.storeCode}`.substring(0, 31); // Excel sheet name limit
+          XLSX.utils.book_append_sheet(wb, ws, sheetName);
+        });
+    }
+
+    function exportSummaryFormat(wb, dataSource, includeStoreInfo) {
+      const headers = ['Store Code'];
+      if (includeStoreInfo) headers.push('Store Name', 'Rank');
+      headers.push('Total Items', 'Total Quantity', 'Avg Qty per Item');
+
+      const rows = [headers];
+      
+      if (dataSource.sortedStores && dataSource.sortedStores.length > 0) {
+        let grandTotalItems = 0;
+        let grandTotalQty = 0;
+        
+        dataSource.sortedStores
+          .slice()
+          .sort((a,b) => (parseInt(String(a.storeCode))||999999) - (parseInt(String(b.storeCode))||999999))
+          .forEach(store => {
+            const row = [store.storeCode];
+            if (includeStoreInfo) row.push(store.storeName, store.rank);
+            const avgQty = store.totalQuantity / Math.max(store.items.length, 1);
+            row.push(store.items.length, store.totalQuantity, Math.round(avgQty * 100) / 100);
+            rows.push(row);
+            
+            grandTotalItems += store.items.length;
+            grandTotalQty += store.totalQuantity;
+          });
+
+        // Add totals row
+        rows.push(['']); // Empty row
+        const totalsRow = ['TOTALS'];
+        if (includeStoreInfo) totalsRow.push('', '');
+        totalsRow.push(grandTotalItems, grandTotalQty, Math.round((grandTotalQty / Math.max(grandTotalItems, 1)) * 100) / 100);
+        rows.push(totalsRow);
       }
 
-      XLSX.writeFile(wb, `Inventory_Sorting_${stamp}.xlsx`);
+      const wsSummary = XLSX.utils.aoa_to_sheet(rows);
+      applySheetStyling(wsSummary, headers.length);
+      XLSX.utils.book_append_sheet(wb, wsSummary, 'Summary');
+    }
+
+    function applySheetStyling(worksheet, colCount) {
+      // Set column widths
+      const colWidths = [];
+      for (let i = 0; i < colCount; i++) {
+        colWidths.push({ width: i === 0 ? 12 : (i === 1 ? 25 : 15) });
+      }
+      worksheet['!cols'] = colWidths;
+
+      // Auto-fit would be nice but not easily available in SheetJS
+      // The basic column widths above should suffice
     }
 
     function startOver() {

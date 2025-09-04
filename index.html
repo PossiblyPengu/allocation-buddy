@@ -3,203 +3,141 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Inventory Sorter - Compact Dashboard</title>
+  <title>Allocation Buddy - Compact Dashboard</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <style>
-    * { margin:0; padding:0; box-sizing:border-box; }
     :root { 
-      --pink-1:#ff69b4; 
-      --pink-2:#ff1493; 
-      --pink-light:#ffb6c1; 
-      --ink-1:#2c2c2c; 
-      --ink-2:#1a1a1a; 
-      --light:#ffffff; 
-      --muted:#fce4ec; 
-      --success:#4caf50; 
-      --warning:#ff9800; 
-      --danger:#f44336; 
+      --pink-1:#ff69b4; --pink-2:#ff1493; --pink-light:#ffb6c1; 
+      --ink-1:#2c2c2c; --ink-2:#1a1a1a; --light:#ffffff; --muted:#fce4ec; 
+      --success:#4caf50; --warning:#ff9800; --danger:#f44336;
+      --gradient-primary:linear-gradient(135deg, var(--pink-1) 0%, var(--pink-2) 100%);
+      --gradient-dark:linear-gradient(135deg, var(--ink-1) 0%, var(--ink-2) 100%);
+      --gradient-success:linear-gradient(135deg, var(--success) 0%, #388e3c 100%);
+      --gradient-warning:linear-gradient(135deg, var(--warning) 0%, #f57c00 100%);
+      --gradient-danger:linear-gradient(135deg, var(--danger) 0%, #d32f2f 100%);
     }
-    body { 
-      font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-      background:linear-gradient(135deg, var(--pink-1) 0%, var(--pink-2) 100%); 
-      min-height:100vh; 
-      padding:15px; 
-      color:#111; 
-    }
-    .container { max-width:1400px; margin:0 auto; background:var(--light); border-radius:15px; box-shadow:0 20px 40px rgba(0,0,0,.1); overflow:hidden; }
-    .header { background:linear-gradient(135deg, var(--ink-1) 0%, var(--ink-2) 100%); color:var(--light); padding:25px 40px; text-align:center; position:relative; }
-    .header h1 { font-size:2.2em; margin-bottom:8px; font-weight:300; }
-    .dark-mode-toggle { position:absolute; top:20px; right:20px; display:flex; align-items:center; gap:12px; color:#fff; font-size:14px; font-weight:500; z-index:10; }
-    .toggle-switch { width:50px; height:24px; background:rgba(255,255,255,.2); border-radius:12px; position:relative; cursor:pointer; transition:all .3s ease; border:2px solid rgba(255,255,255,.3); }
-    .toggle-switch:hover { background:rgba(255,255,255,.3); border-color:rgba(255,255,255,.5); }
-    .toggle-switch::after { content:""; position:absolute; width:18px; height:18px; background:#fff; border-radius:50%; top:1px; left:1px; transition:all .3s ease; box-shadow:0 2px 4px rgba(0,0,0,.2); }
-    .toggle-switch.active { background:var(--pink-1); border-color:var(--pink-1); }
-    .toggle-switch.active::after { transform:translateX(26px); }
-    .toggle-icon { font-size:16px; transition:all .3s ease; }
-
-    .dashboard { padding:25px; display:grid; grid-template-columns:350px 1fr; gap:25px; }
-    .sidebar { display:flex; flex-direction:column; gap:20px; }
-    .main-area { display:flex; flex-direction:column; gap:20px; }
-
-    .card { background:#fff; border:1px solid #ddd; border-radius:12px; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,0.05); }
-    .card h3 { color:var(--ink-1); margin-bottom:15px; font-size:1.1em; display:flex; align-items:center; gap:8px; }
-
-    .stats-row { display:grid; grid-template-columns:repeat(4, 1fr); gap:15px; }
-    .stat-card { background:linear-gradient(135deg, var(--pink-1) 0%, var(--pink-2) 100%); color:#fff; padding:20px; border-radius:10px; text-align:center; }
-    .stat-value { font-size:2.2em; font-weight:bold; display:block; }
-    .stat-label { font-size:0.9em; opacity:0.9; margin-top:5px; }
-
-    .import-tabs { display:flex; background:#f8f9fa; border-radius:8px; padding:3px; margin-bottom:15px; }
-    .import-tab { flex:1; padding:8px 15px; background:transparent; border:none; border-radius:5px; cursor:pointer; font-weight:500; transition:all 0.3s ease; text-align:center; font-size:14px; }
-    .import-tab.active { background:var(--pink-1); color:white; }
-    .import-tab:hover:not(.active) { background:rgba(255,105,180,0.1); }
-    .import-content { display:none; }
-    .import-content.active { display:block; }
-    .upload-area { border:2px dashed #ddd; border-radius:8px; padding:20px; text-align:center; background:#fef5f8; }
-    .upload-area:hover { border-color:var(--pink-1); background:#ffe0ec; }
-
-    .store-list { max-height:300px; overflow-y:auto; border:1px solid #eee; border-radius:6px; padding:10px; }
-    .store-item { display:flex; align-items:center; padding:8px; margin:2px 0; background:#f8f9fa; border-radius:4px; font-size:14px; }
-    .store-item input { margin-right:10px; }
-    .store-item .info { flex:1; display:flex; align-items:center; gap:10px; }
-    .store-item .code { font-weight:bold; min-width:40px; }
-    .store-item .name { font-size:12px; color:#666; }
-    .rank-badge { background:var(--pink-1); color:#fff; padding:2px 6px; border-radius:8px; font-size:10px; font-weight:500; }
-    
-.rank-badge.rank-aa {
-  background: #FFD700 !important; /* Gold */
-  color: #000 !important;
-}
-.rank-badge.rank-a {
-  background: #FF4500 !important; /* OrangeRed */
-  color: #fff !important;
-}
-.rank-badge.rank-b {
-  background: #1E90FF !important; /* DodgerBlue */
-  color: #fff !important;
-}
-.rank-badge.rank-c {
-  background: #32CD32 !important; /* LimeGreen */
-  color: #fff !important;
-}
-
-    .remove-btn { background:var(--danger); color:#fff; border:none; border-radius:3px; padding:3px 6px; cursor:pointer; font-size:11px; }
-
-    .add-store { display:grid; gap:10px; }
-    .add-store input, .add-store select { padding:8px; border:1px solid #ddd; border-radius:6px; font-size:14px; }
-
-    .queue { max-height:250px; overflow-y:auto; }
-    .queue-item { display:flex; justify-content:space-between; align-items:center; padding:10px; margin:5px 0; background:#f8f9fa; border-radius:6px; font-size:14px; }
-    .queue-item .details { font-size:12px; color:#666; margin-top:2px; }
-
-    .big-button { 
-      background:linear-gradient(135deg, var(--pink-1) 0%, var(--pink-2) 100%); 
-      color:#fff; 
-      border:none; 
-      padding:12px 20px; 
-      border-radius:8px; 
-      cursor:pointer; 
-      font-size:14px; 
-      font-weight:500; 
-      transition:all .3s ease; 
-    }
-    .big-button:hover { 
-      transform:translateY(-1px); 
-      box-shadow:0 4px 12px rgba(255,105,180,.3); 
-    }
-    .big-button.success { background:linear-gradient(135deg, var(--success) 0%, #388e3c 100%); }
-    .big-button.warning { background:linear-gradient(135deg, var(--warning) 0%, #f57c00 100%); }
-    .big-button.danger { background:linear-gradient(135deg, var(--danger) 0%, #d32f2f 100%); }
-    .big-button.large { font-size:16px; padding:15px 25px; }
-    .big-button:disabled { opacity:0.55; cursor:not-allowed; }
-
-    .hidden { display:none; }
-    .simple-alert { padding:12px; border-radius:6px; margin:10px 0; font-size:14px; }
-    .alert-info { background:#ffe0ec; border:1px solid #ffb6c1; color:var(--ink-1); }
-    .alert-success { background:#e8f5e8; border:1px solid #c8e6c9; color:var(--ink-1); }
-    .alert-warning { background:#fff3e0; border:1px solid #ffcc80; color:var(--ink-1); }
-    .alert-danger { background:#ffebee; border:1px solid #ffcdd2; color:var(--ink-1); }
-
-    .store-panes { margin:20px 0; }
-    .store-pane { background:#fff; border:2px solid #ddd; border-radius:12px; margin-bottom:20px; overflow:hidden; }
-    .store-pane-header { background:var(--pink-1); color:white; padding:12px 16px; display:flex; justify-content:space-between; align-items:center; gap:10px; }
-    .store-pane-title { font-weight:bold; font-size:18px; display:flex; align-items:center; gap:10px; }
-    .store-pane-stats { font-size:14px; display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
-    .copy-btn { background:#ffffff; color:#1a1a1a; border:none; border-radius:6px; padding:6px 10px; cursor:pointer; font-size:12px; font-weight:600; }
-    .copy-btn:hover { filter:brightness(0.95); }
-    .copied-badge { background:#ecfdf5; color:#065f46; border:1px solid #a7f3d0; padding:3px 8px; border-radius:9999px; font-size:12px; font-weight:700; }
-
-    .store-pane-body { padding:10px 12px 16px; }
-    .store-pane-table { width:100%; border-collapse:collapse; }
-    .store-pane-table th { background:#f8f9fa; padding:10px; text-left; border-bottom:2px solid #dee2e6; font-weight:600; }
-    .store-pane-table td { padding:8px 10px; border-bottom:1px solid #eee; }
-    .store-pane-table tr:hover { background:#f8f9fa; }
-    .store-pane-table tr:nth-child(even) { background:#fafafa; }
-
-    /* Collapsible controls */
-    .collapse-toggle { background:rgba(255,255,255,0.2); border:1px solid rgba(255,255,255,0.35); color:#fff; border-radius:8px; padding:6px 10px; cursor:pointer; font-size:12px; display:flex; align-items:center; gap:6px; }
-    .chev { display:inline-block; transition:transform .2s ease; }
-    .collapsed .chev { transform:rotate(-90deg); }
-    .collapsed .store-pane-body { display:none; }
-
-    /* Redistribution highlighting */
-    .store-pane-table tr.redistributed-row { background:#e8f5e8 !important; }
-    .delta-badge { display:inline-block; margin-left:8px; padding:2px 8px; font-size:11px; border-radius:9999px; font-weight:700; background:#e8f5e8; border:1px solid #c8e6c9; color:#1b5e20; line-height:1.4; vertical-align:middle; }
-    .legend-note { font-size:12px; color:#2e7d32; margin:8px 0 -4px 0; }
-
-    #fullResultsSection { background:var(--muted); padding:25px; margin-top:0; }
-    .results-shell { max-width:1400px; margin:0 auto; background:var(--light); border-radius:15px; box-shadow:0 20px 40px rgba(0,0,0,.1); padding:30px; }
-
-    /* Dark mode */
-    body.dark-mode { background:linear-gradient(135deg, var(--ink-2) 0%, #000000 100%); color:#fce4ec; }
-    body.dark-mode .container { background:#0a0a0a; color:#fce4ec; }
-    body.dark-mode .card { background:#1a1a1a; border-color:#333; color:#fce4ec; }
-    body.dark-mode .card h3 { color:#ffb6c1; }
-    body.dark-mode .store-item { background:#222; color:#fce4ec; }
-    body.dark-mode .store-item .name { color:#ffb6c1; }
-    body.dark-mode .queue-item { background:#222; color:#fce4ec; }
-    body.dark-mode .queue-item .details { color:#ffb6c1; }
-    body.dark-mode .import-tabs { background:#1a1a1a; }
-    body.dark-mode .import-tab { color:#fce4ec; }
-    body.dark-mode .import-tab.active { background:var(--pink-1); color:#fff; }
-    body.dark-mode .upload-area { background:#1a1a1a; border-color:#333; }
-    body.dark-mode .upload-area:hover { background:#222; }
-    body.dark-mode input, 
-    body.dark-mode select, 
-    body.dark-mode textarea { background:#1a1a1a; color:#fce4ec; border-color:#333; }
-    body.dark-mode ::placeholder { color:#9e9e9e; }
-
-    body.dark-mode #fullResultsSection { background:#000000; }
-    body.dark-mode .results-shell { background:#0a0a0a; color:#fce4ec; }
-    body.dark-mode .results-shell h2 { color:#ffb6c1; }
-
-    body.dark-mode .store-pane { background:#1a1a1a; border-color:#333; }
-    body.dark-mode .store-pane-header { background:linear-gradient(135deg, #d81b60 0%, #c2185b 100%); }
-    body.dark-mode .store-pane-table th { background:#222; color:#ffb6c1; border-bottom-color:#444; }
-    body.dark-mode .store-pane-table td { border-bottom-color:#333; color:#fce4ec; }
-    body.dark-mode .store-pane-table tr:hover { background:#222; }
-    body.dark-mode .store-pane-table tr:nth-child(even) { background:#1a1a1a; }
-    body.dark-mode .store-pane-table tr.redistributed-row { background:#1a3d1a !important; }
-    body.dark-mode .delta-badge { background:#1a3d1a; border-color:#2e5e2e; color:#90ee90; }
-    body.dark-mode .legend-note { color:#90ee90; }
-
-    body.dark-mode .simple-alert { color:#fce4ec; }
-    body.dark-mode .alert-info { background:#330a1c; border-color:#d81b60; color:#ffb6c1; }
-    body.dark-mode .alert-success { background:#0a2e0a; border-color:#2e5e2e; color:#90ee90; }
-    body.dark-mode .alert-warning { background:#331a00; border-color:#664000; color:#ffb366; }
-    body.dark-mode .alert-danger { background:#330a0a; border-color:#661414; color:#ff9999; }
-
-    body.dark-mode .copy-btn { background:#000; color:#ffb6c1; border:1px solid #333; }
-    body.dark-mode .copied-badge { background:#1a3d1a; border-color:#2e5e2e; color:#90ee90; }
-    body.dark-mode .collapse-toggle { background:#000; border-color:#333; color:#fce4ec; }
-
-    .toast { position:fixed; right:16px; bottom:16px; background:#111827; color:#fff; padding:10px 14px; border-radius:8px; font-size:13px; box-shadow:0 8px 20px rgba(0,0,0,.25); opacity:0; pointer-events:none; transform:translateY(10px); transition:opacity .2s ease, transform .2s ease; z-index:9999; }
-    .toast.show { opacity:1; transform:translateY(0); }
-    .toast-light { background:#f8fafc; color:#111; border:1px solid #e5e7eb; }
-
-    @media (max-width:1200px) {
-      .dashboard { grid-template-columns:1fr; padding:20px; }
-      .stats-row { grid-template-columns:repeat(2, 1fr); }
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background:var(--gradient-primary);min-height:100vh;padding:15px;color:#111;}
+    .container{max-width:1400px;margin:0 auto;background:var(--light);border-radius:15px;box-shadow:0 20px 40px rgba(0,0,0,.1);overflow:hidden;}
+    .header{background:var(--gradient-dark);color:var(--light);padding:25px 40px;text-align:center;position:relative;}
+    .header h1{font-size:2.2em;margin-bottom:8px;font-weight:300;}
+    .dark-mode-toggle{position:absolute;top:20px;right:20px;display:flex;align-items:center;gap:12px;color:#fff;font-size:14px;font-weight:500;z-index:10;}
+    .toggle-switch{width:50px;height:24px;background:rgba(255,255,255,.2);border-radius:12px;position:relative;cursor:pointer;transition:all .3s ease;border:2px solid rgba(255,255,255,.3);}
+    .toggle-switch:hover{background:rgba(255,255,255,.3);border-color:rgba(255,255,255,.5);}
+    .toggle-switch::after{content:"";position:absolute;width:18px;height:18px;background:#fff;border-radius:50%;top:1px;left:1px;transition:all .3s ease;box-shadow:0 2px 4px rgba(0,0,0,.2);}
+    .toggle-switch.active{background:var(--pink-1);border-color:var(--pink-1);}
+    .toggle-switch.active::after{transform:translateX(26px);}
+    .toggle-icon{font-size:16px;transition:all .3s ease;}
+    .dashboard{padding:25px;display:grid;grid-template-columns:350px 1fr;gap:25px;}
+    .sidebar,.main-area{display:flex;flex-direction:column;gap:20px;}
+    .card{background:#fff;border:1px solid #ddd;border-radius:12px;padding:20px;box-shadow:0 2px 8px rgba(0,0,0,0.05);}
+    .card h3{color:var(--ink-1);margin-bottom:15px;font-size:1.1em;display:flex;align-items:center;gap:8px;}
+    .stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:15px;}
+    .stat-card{background:var(--gradient-primary);color:#fff;padding:20px;border-radius:10px;text-align:center;}
+    .stat-value{font-size:2.2em;font-weight:bold;display:block;}
+    .stat-label{font-size:0.9em;opacity:0.9;margin-top:5px;}
+    .import-tabs{display:flex;background:#f8f9fa;border-radius:8px;padding:3px;margin-bottom:15px;}
+    .import-tab{flex:1;padding:8px 15px;background:transparent;border:none;border-radius:5px;cursor:pointer;font-weight:500;transition:all 0.3s ease;text-align:center;font-size:14px;}
+    .import-tab.active{background:var(--pink-1);color:white;}
+    .import-tab:hover:not(.active){background:rgba(255,105,180,0.1);}
+    .import-content{display:none;}
+    .import-content.active{display:block;}
+    .upload-area{border:2px dashed #ddd;border-radius:8px;padding:20px;text-align:center;background:#fef5f8;}
+    .upload-area:hover{border-color:var(--pink-1);background:#ffe0ec;}
+    .store-list{max-height:300px;overflow-y:auto;border:1px solid #eee;border-radius:6px;padding:10px;}
+    .store-item{display:flex;align-items:center;padding:8px;margin:2px 0;background:#f8f9fa;border-radius:4px;font-size:14px;}
+    .store-item input{margin-right:10px;}
+    .store-item .info{flex:1;display:flex;align-items:center;gap:10px;}
+    .store-item .code{font-weight:bold;min-width:40px;}
+    .store-item .name{font-size:12px;color:#666;}
+    .rank-badge{background:var(--pink-1);color:#fff;padding:2px 6px;border-radius:8px;font-size:10px;font-weight:500;}
+    .rank-badge.rank-aa{background:#FFD700!important;color:#000!important;}
+    .rank-badge.rank-a{background:#FF4500!important;color:#fff!important;}
+    .rank-badge.rank-b{background:#1E90FF!important;color:#fff!important;}
+    .rank-badge.rank-c{background:#32CD32!important;color:#fff!important;}
+    .remove-btn{background:var(--danger);color:#fff;border:none;border-radius:3px;padding:3px 6px;cursor:pointer;font-size:11px;}
+    .add-store{display:grid;gap:10px;}
+    .add-store input,.add-store select{padding:8px;border:1px solid #ddd;border-radius:6px;font-size:14px;}
+    .queue{max-height:250px;overflow-y:auto;}
+    .queue-item{display:flex;justify-content:space-between;align-items:center;padding:10px;margin:5px 0;background:#f8f9fa;border-radius:6px;font-size:14px;}
+    .queue-item .details{font-size:12px;color:#666;margin-top:2px;}
+    .big-button{background:var(--gradient-primary);color:#fff;border:none;padding:12px 20px;border-radius:8px;cursor:pointer;font-size:14px;font-weight:500;transition:all .3s ease;}
+    .big-button:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(255,105,180,.3);}
+    .big-button.success{background:var(--gradient-success);}
+    .big-button.warning{background:var(--gradient-warning);}
+    .big-button.danger{background:var(--gradient-danger);}
+    .big-button.large{font-size:16px;padding:15px 25px;}
+    .big-button:disabled{opacity:0.55;cursor:not-allowed;}
+    .hidden{display:none;}
+    .simple-alert{padding:12px;border-radius:6px;margin:10px 0;font-size:14px;}
+    .alert-info{background:#ffe0ec;border:1px solid #ffb6c1;color:var(--ink-1);}
+    .alert-success{background:#e8f5e8;border:1px solid #c8e6c9;color:var(--ink-1);}
+    .alert-warning{background:#fff3e0;border:1px solid #ffcc80;color:var(--ink-1);}
+    .alert-danger{background:#ffebee;border:1px solid #ffcdd2;color:var(--ink-1);}
+    .store-panes{margin:20px 0;}
+    .store-pane{background:#fff;border:2px solid #ddd;border-radius:12px;margin-bottom:20px;overflow:hidden;}
+    .store-pane-header{background:var(--pink-1);color:white;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;gap:10px;}
+    .store-pane-title{font-weight:bold;font-size:18px;display:flex;align-items:center;gap:10px;}
+    .store-pane-stats{font-size:14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+    .copy-btn{background:#ffffff;color:#1a1a1a;border:none;border-radius:6px;padding:6px 10px;cursor:pointer;font-size:12px;font-weight:600;}
+    .copy-btn:hover{filter:brightness(0.95);}
+    .copied-badge{background:#ecfdf5;color:#065f46;border:1px solid #a7f3d0;padding:3px 8px;border-radius:9999px;font-size:12px;font-weight:700;}
+    .store-pane-body{padding:10px 12px 16px;}
+    .store-pane-table{width:100%;border-collapse:collapse;}
+    .store-pane-table th{background:#f8f9fa;padding:10px;text-align:left;border-bottom:2px solid #dee2e6;font-weight:600;}
+    .store-pane-table td{padding:8px 10px;border-bottom:1px solid #eee;}
+    .store-pane-table tr:hover{background:#f8f9fa;}
+    .store-pane-table tr:nth-child(even){background:#fafafa;}
+    .collapse-toggle{background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.35);color:#fff;border-radius:8px;padding:6px 10px;cursor:pointer;font-size:12px;display:flex;align-items:center;gap:6px;}
+    .chev{display:inline-block;transition:transform .2s ease;}
+    .collapsed .chev{transform:rotate(-90deg);}
+    .collapsed .store-pane-body{display:none;}
+    .store-pane-table tr.redistributed-row{background:#e8f5e8!important;}
+    .delta-badge{display:inline-block;margin-left:8px;padding:2px 8px;font-size:11px;border-radius:9999px;font-weight:700;background:#e8f5e8;border:1px solid #c8e6c9;color:#1b5e20;line-height:1.4;vertical-align:middle;}
+    .legend-note{font-size:12px;color:#2e7d32;margin:8px 0 -4px 0;}
+    #fullResultsSection{background:var(--muted);padding:25px;margin-top:0;}
+    .results-shell{max-width:1400px;margin:0 auto;background:var(--light);border-radius:15px;box-shadow:0 20px 40px rgba(0,0,0,.1);padding:30px;}
+    body.dark-mode{background:linear-gradient(135deg,var(--ink-2) 0%,#000000 100%);color:#fce4ec;}
+    body.dark-mode .container{background:#0a0a0a;color:#fce4ec;}
+    body.dark-mode .card{background:#1a1a1a;border-color:#333;color:#fce4ec;}
+    body.dark-mode .card h3{color:#ffb6c1;}
+    body.dark-mode .store-item{background:#222;color:#fce4ec;}
+    body.dark-mode .store-item .name{color:#ffb6c1;}
+    body.dark-mode .queue-item{background:#222;color:#fce4ec;}
+    body.dark-mode .queue-item .details{color:#ffb6c1;}
+    body.dark-mode .import-tabs{background:#1a1a1a;}
+    body.dark-mode .import-tab{color:#fce4ec;}
+    body.dark-mode .import-tab.active{background:var(--pink-1);color:#fff;}
+    body.dark-mode .upload-area{background:#1a1a1a;border-color:#333;}
+    body.dark-mode .upload-area:hover{background:#222;}
+    body.dark-mode input,body.dark-mode select,body.dark-mode textarea{background:#1a1a1a;color:#fce4ec;border-color:#333;}
+    body.dark-mode ::placeholder{color:#9e9e9e;}
+    body.dark-mode #fullResultsSection{background:#000000;}
+    body.dark-mode .results-shell{background:#0a0a0a;color:#fce4ec;}
+    body.dark-mode .results-shell h2{color:#ffb6c1;}
+    body.dark-mode .store-pane{background:#1a1a1a;border-color:#333;}
+    body.dark-mode .store-pane-header{background:linear-gradient(135deg,#d81b60 0%,#c2185b 100%);}
+    body.dark-mode .store-pane-table th{background:#222;color:#ffb6c1;border-bottom-color:#444;}
+    body.dark-mode .store-pane-table td{border-bottom-color:#333;color:#fce4ec;}
+    body.dark-mode .store-pane-table tr:hover{background:#222;}
+    body.dark-mode .store-pane-table tr:nth-child(even){background:#1a1a1a;}
+    body.dark-mode .store-pane-table tr.redistributed-row{background:#1a3d1a!important;}
+    body.dark-mode .delta-badge{background:#1a3d1a;border-color:#2e5e2e;color:#90ee90;}
+    body.dark-mode .legend-note{color:#90ee90;}
+    body.dark-mode .simple-alert{color:#fce4ec;}
+    body.dark-mode .alert-info{background:#330a1c;border-color:#d81b60;color:#ffb6c1;}
+    body.dark-mode .alert-success{background:#0a2e0a;border-color:#2e5e2e;color:#90ee90;}
+    body.dark-mode .alert-warning{background:#331a00;border-color:#664000;color:#ffb366;}
+    body.dark-mode .alert-danger{background:#330a0a;border-color:#661414;color:#ff9999;}
+    body.dark-mode .copy-btn{background:#000;color:#ffb6c1;border:1px solid #333;}
+    body.dark-mode .copied-badge{background:#1a3d1a;border-color:#2e5e2e;color:#90ee90;}
+    body.dark-mode .collapse-toggle{background:#000;border-color:#333;color:#fce4ec;}
+    .toast{position:fixed;right:16px;bottom:16px;background:#111827;color:#fff;padding:10px 14px;border-radius:8px;font-size:13px;box-shadow:0 8px 20px rgba(0,0,0,.25);opacity:0;pointer-events:none;transform:translateY(10px);transition:opacity .2s ease,transform .2s ease;z-index:9999;}
+    .toast.show{opacity:1;transform:translateY(0);}
+    .toast-light{background:#f8fafc;color:#111;border:1px solid #e5e7eb;}
+    @media (max-width:1200px){
+      .dashboard{grid-template-columns:1fr;padding:20px;}
+      .stats-row{grid-template-columns:repeat(2,1fr);}
     }
   </style>
 </head>
@@ -215,22 +153,21 @@
     </div>
 
     <div class="dashboard">
-      <!-- Sidebar -->
       <div class="sidebar">
         <div class="card">
           <h3>🪪 Store Management</h3>
           <div class="import-tabs">
-            <button class="import-tab active" onclick="switchStoreTab(event,'manage')">📋 Manage Stores</button>
-            <button class="import-tab" onclick="switchStoreTab(event,'add')">➕ Add Store</button>
+            <button class="import-tab active" onclick="switchTab('store','manage')">📋 Manage Stores</button>
+            <button class="import-tab" onclick="switchTab('store','add')">➕ Add Store</button>
           </div>
 
           <div class="import-content active" id="manage-content">
-            <div style="display:flex; justify-content:space-between; margin-bottom:15px; font-size:14px;">
+            <div style="display:flex;justify-content:space-between;margin-bottom:15px;font-size:14px;">
               <span>Active: <strong id="activeStoreCount">0</strong></span>
               <span>Inactive: <strong id="inactiveStoreCount">0</strong></span>
               <div>
-                <button class="big-button" onclick="selectAllStores()" style="padding:4px 8px; font-size:12px; margin-right:5px;">All</button>
-                <button class="big-button" onclick="deselectAllStores()" style="padding:4px 8px; font-size:12px;">None</button>
+                <button class="big-button" onclick="toggleAllStores(true)" style="padding:4px 8px;font-size:12px;margin-right:5px;">All</button>
+                <button class="big-button" onclick="toggleAllStores(false)" style="padding:4px 8px;font-size:12px;">None</button>
               </div>
             </div>
             <div class="store-list" id="storeStatusContainer"></div>
@@ -246,7 +183,7 @@
                 <option value="B" selected>B - Standard</option>
                 <option value="C">C - Regular</option>
               </select>
-              <label style="display:flex; align-items:center; gap:8px; font-size:14px;">
+              <label style="display:flex;align-items:center;gap:8px;font-size:14px;">
                 <input type="checkbox" id="newStoreActive" checked/> Start as active
               </label>
               <button class="big-button success" onclick="addNewStore()">Add Store</button>
@@ -255,9 +192,7 @@
         </div>
       </div>
 
-      <!-- Main Area -->
       <div class="main-area">
-        <!-- Stats Row -->
         <div class="stats-row">
           <div class="stat-card"><span class="stat-value" id="itemCount">0</span><div class="stat-label">Items to Sort</div></div>
           <div class="stat-card"><span class="stat-value" id="storeDestinationCount">0</span><div class="stat-label">Destinations</div></div>
@@ -265,51 +200,36 @@
           <div class="stat-card"><span class="stat-value" id="totalProcessed">0</span><div class="stat-label">Processed</div></div>
         </div>
 
-        <!-- Import Methods -->
         <div class="card">
           <h3>📤 Import Data</h3>
           <div class="import-tabs">
-            <button class="import-tab active" onclick="switchImportTab(event,'upload')">📄 Upload Excel</button>
-            <button class="import-tab" onclick="switchImportTab(event,'paste')">📋 Paste Data</button>
-            </div>
+            <button class="import-tab active" onclick="switchTab('import','upload')">📄 Upload Excel</button>
+            <button class="import-tab" onclick="switchTab('import','paste')">📋 Paste Data</button>
+          </div>
 
           <div class="import-content active" id="upload-content">
             <div class="upload-area">
               <h4>Upload Excel File</h4>
-              <p style="margin:10px 0; font-size:14px; color:#666;">Choose .xlsx, .xlsm, or .xls files</p>
-              <p style="margin:5px 0; font-size:12px; color:#888;">✨ Supports store codes OR store names</p>
+              <p style="margin:10px 0;font-size:14px;color:#666;">Choose .xlsx, .xlsm, or .xls files</p>
+              <p style="margin:5px 0;font-size:12px;color:#888;">✨ Supports store codes OR store names</p>
               <input type="file" id="fileInput" accept=".xlsx,.xlsm,.xls" onchange="handleFileUpload(event)" style="display:none;"/>
-              <button class="big-button" onclick="document.getElementById('fileInput').click()">Choose File</button>
-              <div id="fileStatus" style="font-size:12px; margin-top:10px;"></div>
+              <button class="big-button" onclick="$('#fileInput').click()">Choose File</button>
+              <div id="fileStatus" style="font-size:12px;margin-top:10px;"></div>
             </div>
           </div>
 
           <div class="import-content" id="paste-content">
-            <div style="text-align:center; margin-bottom:15px;">
+            <div style="text-align:center;margin-bottom:15px;">
               <h4>Paste Data</h4>
-              <p style="font-size:14px; color:#666; margin:5px 0;">Copy from Excel and paste below</p>
-              <p style="font-size:12px; color:#888;">Format: ItemNumber, Quantity, StoreCode/StoreName</p>
+              <p style="font-size:14px;color:#666;margin:5px 0;">Copy from Excel and paste below</p>
+              <p style="font-size:12px;color:#888;">Format: ItemNumber, Quantity, StoreCode/StoreName</p>
             </div>
-            <textarea id="pasteArea" placeholder="Example:&#10;NSN-0402-21, 10, 101&#10;NSN-0405-04, 20, NIAGARA 1&#10;NSN-0405-05, 15, MISSISSAUGA" style="width:100%; height:100px; font-size:12px; padding:10px; border:1px solid #ddd; border-radius:6px; font-family:monospace;"></textarea>
-            <button class="big-button success" onclick="processPastedData()" style="margin-top:10px; width:100%;">Process Data</button>
-          </div>
-
-          <div class="import-content" id="sample-content">
-            <div style="text-align:center;">
-              <h4>Sample Data</h4>
-              <p style="font-size:14px; color:#666; margin:10px 0;">Test with 4 sample items</p>
-              <div style="background:#f0f0f0; padding:10px; border-radius:6px; font-size:12px; margin:10px 0; font-family:monospace;">
-                NSN-0402-21 → Store 101 (10 units)<br/>
-                NSN-0405-04 → NIAGARA 1 (INACTIVE)<br/>
-                NSN-0405-05 → MISSISSAUGA (15 units)<br/>
-                NSN-0960-19 → Store 999 (NOT FOUND)
-              </div>
-              </div>
+            <textarea id="pasteArea" placeholder="Example:&#10;NSN-0402-21, 10, 101&#10;NSN-0405-04, 20, NIAGARA 1&#10;NSN-0405-05, 15, MISSISSAUGA" style="width:100%;height:100px;font-size:12px;padding:10px;border:1px solid #ddd;border-radius:6px;font-family:monospace;"></textarea>
+            <button class="big-button success" onclick="processPastedData()" style="margin-top:10px;width:100%;">Process Data</button>
           </div>
         </div>
 
-        <!-- Queue & Actions -->
-        <div style="display:grid; grid-template-columns:2fr 1fr; gap:20px;">
+        <div style="display:grid;grid-template-columns:2fr 1fr;gap:20px;">
           <div class="card">
             <h3>📦 Import Queue</h3>
             <div class="queue" id="importContainer">
@@ -321,8 +241,8 @@
           <div class="card">
             <h3>🚀 Actions</h3>
             <div id="sortingStatus" style="margin-bottom:15px;"></div>
-            <button class="big-button success large" onclick="sortItems()" style="width:100%; margin-bottom:10px;">Sort by Store</button>
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+            <button class="big-button success large" onclick="sortItems()" style="width:100%;margin-bottom:10px;">Sort by Store</button>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
               <button class="big-button" onclick="exportResults()">Export</button>
               <button class="big-button warning" onclick="startOver()">Reset</button>
             </div>
@@ -332,12 +252,11 @@
     </div>
   </div>
 
-  <!-- Full-width results section -->
   <div id="fullResultsSection" class="hidden">
     <div class="results-shell">
-      <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px;">
-        <h2 style="font-size:1.8em; display:flex; align-items:center; gap:12px; margin:0;">
-          <span style="background:var(--pink-1); color:#fff; width:50px; height:50px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:24px;">4</span>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;">
+        <h2 style="font-size:1.8em;display:flex;align-items:center;gap:12px;margin:0;">
+          <span style="background:var(--pink-1);color:#fff;width:50px;height:50px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:24px;">4</span>
           Sorting Results
         </h2>
       </div>
@@ -347,329 +266,327 @@
     </div>
   </div>
 
-  <!-- Toast -->
   <div id="copyToast" class="toast">Copied!</div>
 
   <script>
-    // -------------------------
-    // Config: rank weights
-    // -------------------------
-    const RANK_WEIGHTS = { 'AA': 4, 'A': 3, 'B': 2, 'C': 1 };
+    // Cache DOM elements
+    const $ = id => document.getElementById(id);
+    const $$ = sel => document.querySelector(sel);
+    const $$$ = sel => document.querySelectorAll(sel);
+    
+    // Constants
+    const RANK_WEIGHTS = { AA: 4, A: 3, B: 2, C: 1 };
+    const COOKIE_NAME = 'allocationBuddyPrefs';
+    const COOKIE_DAYS = 365;
 
+    // State
     let itemsToSort = [];
-    let lastResults = null; // for Export / Copy & target stores
-    let redistributionDeltas = {}; // "item|storeCode" -> qty added by last redistribution
-    let currentWorkbook = null; // Store workbook for sheet/column selection
-
-    // collapsible + copied state per store
-    const collapsedStores = {}; // storeCode -> boolean
-    const copiedStores = {};    // storeCode -> boolean
-
+    let lastResults = null;
+    let redistributionDeltas = {};
+    let currentWorkbook = null;
+    const collapsedStores = {};
+    const copiedStores = {};
     let allStores = [
-      { code:'101', name:'WATERLOO 1', rank:'C', active:true },
-      { code:'102', name:'KITCHENER 1', rank:'B', active:true },
-      { code:'103', name:'CAMBRIDGE', rank:'B', active:true },
-      { code:'104', name:'LONDON 1', rank:'B', active:true },
-      { code:'105', name:'LONDON 2', rank:'B', active:true },
-      { code:'106', name:'HAMILTON 1', rank:'C', active:true },
-      { code:'107', name:'MISSISSAUGA', rank:'A', active:true },
-      { code:'108', name:'ST CATHARINES', rank:'B', active:true },
-      { code:'109', name:'HAMILTON 2', rank:'A', active:true },
-      { code:'110', name:'TORONTO 1', rank:'A', active:true },
-      { code:'111', name:'SCARBOROUGH', rank:'A', active:true },
-      { code:'112', name:'WINDSOR 1', rank:'A', active:true },
-      { code:'114', name:'TORONTO 2', rank:'A', active:true },
-      { code:'115', name:'KITCHENER 2', rank:'C', active:true },
-      { code:'116', name:'BRANTFORD', rank:'C', active:true },
-      { code:'117', name:'NIAGARA 1', rank:'B', active:false },
-      { code:'118', name:'BURLINGTON', rank:'A', active:true },
-      { code:'119', name:'LONDON 3', rank:'B', active:true },
-      { code:'120', name:'BARRIE 1', rank:'A', active:true },
-      { code:'121', name:'OSHAWA', rank:'A', active:true },
-      { code:'122', name:'BARRIE 2', rank:'A', active:true },
-      { code:'123', name:'GUELPH', rank:'B', active:true },
-      { code:'125', name:'TORONTO 3', rank:'A', active:true },
-      { code:'126', name:'NIAGARA 2', rank:'C', active:true },
-      { code:'127', name:'SARNIA', rank:'C', active:true },
-      { code:'128', name:'OTTAWA 1', rank:'C', active:true },
-      { code:'129', name:'OTTAWA 2', rank:'C', active:true },
-      { code:'130', name:'TORONTO 4', rank:'A', active:true },
-      { code:'131', name:'SUDBURY', rank:'B', active:true },
-      { code:'132', name:'WINDSOR 2', rank:'B', active:true },
-      { code:'133', name:'ST JOHNS', rank:'A', active:true },
-      { code:'134', name:'PETERBOROUGH', rank:'B', active:true },
-      { code:'135', name:'THUNDER BAY', rank:'A', active:true },
-      { code:'199', name:'STAG WEB', rank:'AA', active:true }
+      {code:'101',name:'WATERLOO 1',rank:'C',active:true},
+      {code:'102',name:'KITCHENER 1',rank:'B',active:true},
+      {code:'103',name:'CAMBRIDGE',rank:'B',active:true},
+      {code:'104',name:'LONDON 1',rank:'B',active:true},
+      {code:'105',name:'LONDON 2',rank:'B',active:true},
+      {code:'106',name:'HAMILTON 1',rank:'C',active:true},
+      {code:'107',name:'MISSISSAUGA',rank:'A',active:true},
+      {code:'108',name:'ST CATHARINES',rank:'B',active:true},
+      {code:'109',name:'HAMILTON 2',rank:'A',active:true},
+      {code:'110',name:'TORONTO 1',rank:'A',active:true},
+      {code:'111',name:'SCARBOROUGH',rank:'A',active:true},
+      {code:'112',name:'WINDSOR 1',rank:'A',active:true},
+      {code:'114',name:'TORONTO 2',rank:'A',active:true},
+      {code:'115',name:'KITCHENER 2',rank:'C',active:true},
+      {code:'116',name:'BRANTFORD',rank:'C',active:true},
+      {code:'117',name:'NIAGARA 1',rank:'B',active:false},
+      {code:'118',name:'BURLINGTON',rank:'A',active:true},
+      {code:'119',name:'LONDON 3',rank:'B',active:true},
+      {code:'120',name:'BARRIE 1',rank:'A',active:true},
+      {code:'121',name:'OSHAWA',rank:'A',active:true},
+      {code:'122',name:'BARRIE 2',rank:'A',active:true},
+      {code:'123',name:'GUELPH',rank:'B',active:true},
+      {code:'125',name:'TORONTO 3',rank:'A',active:true},
+      {code:'126',name:'NIAGARA 2',rank:'C',active:true},
+      {code:'127',name:'SARNIA',rank:'C',active:true},
+      {code:'128',name:'OTTAWA 1',rank:'C',active:true},
+      {code:'129',name:'OTTAWA 2',rank:'C',active:true},
+      {code:'130',name:'TORONTO 4',rank:'A',active:true},
+      {code:'131',name:'SUDBURY',rank:'B',active:true},
+      {code:'132',name:'WINDSOR 2',rank:'B',active:true},
+      {code:'133',name:'ST JOHNS',rank:'A',active:true},
+      {code:'134',name:'PETERBOROUGH',rank:'B',active:true},
+      {code:'135',name:'THUNDER BAY',rank:'A',active:true},
+      {code:'199',name:'STAG WEB',rank:'AA',active:true}
     ];
 
-    // Robust numeric sort
-    const sortStoresNumerically = (arr) => {
-      const codeOf = (o) => {
-        const raw = (o && (o.code ?? o.storeCode)) ?? '';
-        const n = parseInt(String(raw), 10);
-        return Number.isFinite(n) ? n : 999999;
-      };
-      return arr.slice().sort((a, b) => codeOf(a) - codeOf(b));
+    // Utilities
+    const setCookie = (name, value, days = COOKIE_DAYS) => {
+      const date = new Date();
+      date.setTime(date.getTime() + (days * 864e5));
+      document.cookie = `${name}=${encodeURIComponent(JSON.stringify(value))};expires=${date.toUTCString()};path=/;SameSite=Strict`;
     };
 
-    // --- Store lookup helper function ---
-    function findStoreByCodeOrName(identifier) {
+    const getCookie = name => {
+      const nameEQ = name + "=";
+      return document.cookie.split(';').reduce((acc, c) => {
+        const cookie = c.trim();
+        if (cookie.startsWith(nameEQ)) {
+          try { return JSON.parse(decodeURIComponent(cookie.substring(nameEQ.length))); }
+          catch(e) { return null; }
+        }
+        return acc;
+      }, null);
+    };
+
+    const sortStoresNumerically = arr => arr.slice().sort((a, b) => 
+      (parseInt(String(a.code || a.storeCode)) || 999999) - (parseInt(String(b.code || b.storeCode)) || 999999)
+    );
+
+    const findStoreByCodeOrName = identifier => {
       if (!identifier) return null;
-      
       const searchStr = String(identifier).trim();
-      
-      // First try exact match by code
-      let store = allStores.find(s => String(s.code) === searchStr);
-      if (store) return store;
-      
-      // Then try case-insensitive name match
-      const searchUpper = searchStr.toUpperCase();
-      store = allStores.find(s => s.name.toUpperCase() === searchUpper);
-      if (store) return store;
-      
-      // Finally try partial name match (contains)
-      store = allStores.find(s => s.name.toUpperCase().includes(searchUpper));
-      return store;
-    }
+      return allStores.find(s => String(s.code) === searchStr) ||
+             allStores.find(s => s.name.toUpperCase() === searchStr.toUpperCase()) ||
+             allStores.find(s => s.name.toUpperCase().includes(searchStr.toUpperCase()));
+    };
 
-    // --- Status helper ---
-    function showStatus(html, type='info'){
-      const s1 = document.getElementById('sortingStatus');
-      const s2 = document.getElementById('resultsStatus');
-      const color = type==='success' ? 'alert-success' : type==='warning' ? 'alert-warning' : type==='danger' ? 'alert-danger' : 'alert-info';
-      const block = `<div class="simple-alert ${color}">${html}</div>`;
-      if (s2) s2.innerHTML = block;
-      if (s1) s1.innerHTML = block;
-    }
+    const showStatus = (html, type = 'info') => {
+      const alertClass = `alert-${type}`;
+      const block = `<div class="simple-alert ${alertClass}">${html}</div>`;
+      const statusElements = [$('sortingStatus'), $('resultsStatus')].filter(Boolean);
+      statusElements.forEach(el => el.innerHTML = block);
+    };
 
-    // --- Tabs ---
-    function switchImportTab(e, tabName) {
-      const importSection = document.querySelector('.main-area .card');
-      const importTabs = importSection.querySelectorAll('.import-tab');
-      const importContents = importSection.querySelectorAll('.import-content');
-      importTabs.forEach(tab => tab.classList.remove('active'));
-      importContents.forEach(content => content.classList.remove('active'));
-      e.currentTarget.classList.add('active');
-      document.getElementById(tabName + '-content').classList.add('active');
-    }
-    function switchStoreTab(e, tabName) {
-      const storeSection = document.querySelector('.sidebar .card');
-      const storeTabs = storeSection.querySelectorAll('.import-tab');
-      const storeContents = storeSection.querySelectorAll('.import-content');
-      storeTabs.forEach(tab => tab.classList.remove('active'));
-      storeContents.forEach(content => content.classList.remove('active'));
-      e.currentTarget.classList.add('active');
-      document.getElementById(tabName + '-content').classList.add('active');
-    }
-    function switchStoreTabProgrammatically(tabName) {
-      const storeSection = document.querySelector('.sidebar .card');
-      const storeTabs = storeSection.querySelectorAll('.import-tab');
-      const storeContents = storeSection.querySelectorAll('.import-content');
-      storeTabs.forEach(tab => tab.classList.remove('active'));
-      storeContents.forEach(content => content.classList.remove('active'));
-      const targetTab = tabName === 'manage' ? storeTabs[0] : storeTabs[1];
-      targetTab.classList.add('active');
-      document.getElementById(tabName + '-content').classList.add('active');
-    }
+    const saveUserPreferences = () => {
+      const preferences = {
+        darkMode: document.body.classList.contains('dark-mode'),
+        storeStates: allStores.map(s => ({code: s.code, active: s.active})),
+        lastImportTab: $$('.main-area .import-tab.active')?.textContent?.includes('Upload') ? 'upload' : 'paste',
+        lastStoreTab: $$('.sidebar .import-tab.active')?.textContent?.includes('Manage') ? 'manage' : 'add'
+      };
+      setCookie(COOKIE_NAME, preferences);
+    };
 
-    // --- Store UI ---
-    function updateStoreCounts() {
+    const loadUserPreferences = () => {
+      const prefs = getCookie(COOKIE_NAME);
+      if (!prefs) return;
+
+      // Dark mode
+      if (prefs.darkMode !== undefined) {
+        const isDark = prefs.darkMode;
+        document.body.classList.toggle('dark-mode', isDark);
+        $('toggleSwitch').classList.toggle('active', isDark);
+        $('modeIcon').textContent = isDark ? '🌙' : '☀️';
+      }
+
+      // Store states
+      if (Array.isArray(prefs.storeStates)) {
+        prefs.storeStates.forEach(savedStore => {
+          const store = allStores.find(s => s.code === savedStore.code);
+          if (store) store.active = savedStore.active;
+        });
+      }
+
+      // Restore tabs after DOM is ready
+      setTimeout(() => {
+        ['import', 'store'].forEach(type => {
+          const tabName = prefs[`last${type.charAt(0).toUpperCase() + type.slice(1)}Tab`];
+          if (tabName) switchTab(type, tabName, false);
+        });
+      }, 50);
+    };
+
+    // Tab management
+    const switchTab = (section, tabName, save = true) => {
+      const isStore = section === 'store';
+      const container = isStore ? '.sidebar .card' : '.main-area .card';
+      const tabs = $$$(`${container} .import-tab`);
+      const contents = $$$(`${container} .import-content`);
+      
+      tabs.forEach(tab => tab.classList.remove('active'));
+      contents.forEach(content => content.classList.remove('active'));
+      
+      const activeIndex = (isStore && tabName === 'add') || (!isStore && tabName === 'paste') ? 1 : 0;
+      tabs[activeIndex]?.classList.add('active');
+      $(`${tabName}-content`)?.classList.add('active');
+      
+      if (save) saveUserPreferences();
+    };
+
+    // Store management
+    const updateStoreCounts = () => {
       const active = allStores.filter(s => s.active).length;
-      const inactive = allStores.filter(s => !s.active).length;
-      document.getElementById('activeStoreCount').textContent = active;
-      document.getElementById('inactiveStoreCount').textContent = inactive;
-      document.getElementById('activeStoreCount2').textContent = active;
-    }
-    function updateStoreStatus() {
-      const container = document.getElementById('storeStatusContainer');
-      const sortedStores = sortStoresNumerically(allStores);
+      const inactive = allStores.length - active;
+      $('activeStoreCount').textContent = $('activeStoreCount2').textContent = active;
+      $('inactiveStoreCount').textContent = inactive;
+    };
+
+    const updateStoreStatus = () => {
       updateStoreCounts();
-      let html = '';
-      sortedStores.forEach(store => {
-        html += `
+      $('storeStatusContainer').innerHTML = sortStoresNumerically(allStores)
+        .map(store => `
           <div class="store-item">
-            <input type="checkbox" ${store.active ? 'checked' : ''} onchange="toggleStoreStatus('${String(store.code)}', this.checked)"/>
+            <input type="checkbox" ${store.active ? 'checked' : ''} onchange="toggleStoreStatus('${store.code}', this.checked)"/>
             <div class="info">
               <span class="code">${store.code}</span>
               <span class="name">${store.name}</span>
               <span class="rank-badge rank-${store.rank.toLowerCase()}">${store.rank}</span>
             </div>
-            <button class="remove-btn" onclick="removeStore('${String(store.code)}')">×</button>
-          </div>`;
-      });
-      container.innerHTML = html;
+            <button class="remove-btn" onclick="removeStore('${store.code}')">×</button>
+          </div>`)
+        .join('');
       updateDistributeButtonState();
-    }
-    function toggleStoreStatus(storeCode, isActive) {
-      const code = String(storeCode);
-      const store = allStores.find(s => String(s.code) === code);
-      if (store) { store.active = !!isActive; updateStoreCounts(); }
-      updateDistributeButtonState();
-    }
-    function removeStore(storeCode) {
-      const code = String(storeCode);
-      if (confirm(`Delete store ${code}?`)) {
-        allStores = allStores.filter(s => String(s.code) !== code);
-        updateStoreStatus();
+    };
+
+    const toggleStoreStatus = (storeCode, isActive) => {
+      const store = allStores.find(s => s.code === storeCode);
+      if (store) {
+        store.active = isActive;
+        updateStoreCounts();
+        saveUserPreferences();
         updateDistributeButtonState();
       }
-    }
-    function addNewStore() {
-      const code = String(document.getElementById('newStoreCode').value.trim());
-      const name = document.getElementById('newStoreName').value.trim();
-      const rank = document.getElementById('newStoreRank').value;
-      const active = document.getElementById('newStoreActive').checked;
-      if (!code || !name) { alert('Please enter both code and name'); return; }
-      if (allStores.find(s => String(s.code) === code)) { alert('Store code already exists'); return; }
-      allStores.push({ code, name: name.toUpperCase(), rank, active });
-      document.getElementById('newStoreCode').value = '';
-      document.getElementById('newStoreName').value = '';
-      document.getElementById('newStoreRank').value = 'B';
-      document.getElementById('newStoreActive').checked = true;
-      updateStoreStatus();
-      switchStoreTabProgrammatically('manage');
-      updateDistributeButtonState();
-    }
-    function selectAllStores(){ allStores.forEach(s => s.active = true); updateStoreStatus(); updateDistributeButtonState(); }
-    function deselectAllStores(){ allStores.forEach(s => s.active = false); updateStoreStatus(); updateDistributeButtonState(); }
+    };
 
-    // --- Enhanced Import handling ---
-    function handleFileUpload(event) {
+    const toggleAllStores = active => {
+      allStores.forEach(s => s.active = active);
+      updateStoreStatus();
+      saveUserPreferences();
+    };
+
+    const removeStore = storeCode => {
+      if (confirm(`Delete store ${storeCode}?`)) {
+        allStores = allStores.filter(s => s.code !== storeCode);
+        updateStoreStatus();
+        updateDistributeButtonState();
+        saveUserPreferences();
+      }
+    };
+
+    const addNewStore = () => {
+      const code = $('newStoreCode').value.trim();
+      const name = $('newStoreName').value.trim();
+      const rank = $('newStoreRank').value;
+      const active = $('newStoreActive').checked;
+      
+      if (!code || !name) { alert('Please enter both code and name'); return; }
+      if (allStores.find(s => s.code === code)) { alert('Store code already exists'); return; }
+      
+      allStores.push({code, name: name.toUpperCase(), rank, active});
+      ['newStoreCode', 'newStoreName'].forEach(id => $(id).value = '');
+      $('newStoreRank').value = 'B';
+      $('newStoreActive').checked = true;
+      updateStoreStatus();
+      switchTab('store', 'manage');
+      updateDistributeButtonState();
+      saveUserPreferences();
+    };
+
+    // Import handling
+    const handleFileUpload = event => {
       const file = event.target.files[0];
       if (!file) return;
       
-      document.getElementById('fileStatus').innerHTML = '📊 Reading file...';
+      $('fileStatus').innerHTML = '📊 Reading file...';
       
       const reader = new FileReader();
-      reader.onload = (e) => {
+      reader.onload = e => {
         try {
-          const data = new Uint8Array(e.target.result);
-          currentWorkbook = XLSX.read(data, { type:'array', cellDates: true, dateNF: 'yyyy-mm-dd' });
-          
+          currentWorkbook = XLSX.read(new Uint8Array(e.target.result), {type:'array', cellDates: true, dateNF: 'yyyy-mm-dd'});
           if (currentWorkbook.SheetNames.length === 1) {
-            // Single sheet - proceed with import
             importFromSheet(currentWorkbook.SheetNames[0]);
           } else {
-            // Multiple sheets - let user choose
             showSheetSelector();
           }
         } catch (err) {
-          document.getElementById('fileStatus').innerHTML = `❌ Error reading file: ${err.message}`;
+          $('fileStatus').innerHTML = `❌ Error reading file: ${err.message}`;
         }
       };
       reader.readAsArrayBuffer(file);
-    }
+    };
 
-    function showSheetSelector() {
-      const sheetOptions = currentWorkbook.SheetNames
-        .map(name => `<option value="${name}">${name}</option>`)
-        .join('');
-      
-      document.getElementById('fileStatus').innerHTML = `
+    const showSheetSelector = () => {
+      const options = currentWorkbook.SheetNames.map(name => `<option value="${name}">${name}</option>`).join('');
+      $('fileStatus').innerHTML = `
         <div style="margin: 10px 0;">
           <label style="display: block; margin-bottom: 5px; font-weight: 500;">Select Sheet to Import:</label>
           <div style="display: flex; gap: 10px; align-items: center;">
-            <select id="sheetSelector" style="flex: 1; padding: 6px; border: 1px solid #ddd; border-radius: 4px;">
-              ${sheetOptions}
-            </select>
+            <select id="sheetSelector" style="flex: 1; padding: 6px; border: 1px solid #ddd; border-radius: 4px;">${options}</select>
             <button class="big-button" onclick="importSelectedSheet()" style="padding: 6px 12px; font-size: 12px;">Import</button>
           </div>
           <button class="big-button" onclick="showColumnMapper()" style="margin-top: 8px; width: 100%; font-size: 12px;">Advanced Import (Column Mapping)</button>
         </div>`;
-    }
+    };
 
-    function importSelectedSheet() {
-      const selector = document.getElementById('sheetSelector');
-      if (selector) {
-        importFromSheet(selector.value);
-      }
-    }
+    const importSelectedSheet = () => $('sheetSelector') && importFromSheet($('sheetSelector').value);
 
-    function importFromSheet(sheetName, columnMapping = null) {
+    const importFromSheet = (sheetName, columnMapping = null) => {
       try {
-        const worksheet = currentWorkbook.Sheets[sheetName];
-        const rows = XLSX.utils.sheet_to_json(worksheet, { header:1, defval:'', raw: false });
-        
+        const rows = XLSX.utils.sheet_to_json(currentWorkbook.Sheets[sheetName], {header:1, defval:'', raw: false});
         if (rows.length === 0) {
-          document.getElementById('fileStatus').innerHTML = '⚠️ Sheet is empty';
+          $('fileStatus').innerHTML = '⚠️ Sheet is empty';
           return;
         }
 
-        // Auto-detect headers if no column mapping provided
-        let headerRow = -1;
-        let itemCol = 0, qtyCol = 1, storeCol = 2;
+        let headerRow = -1, itemCol = 0, qtyCol = 1, storeCol = 2;
         
         if (!columnMapping) {
-          // Look for header row
+          // Auto-detect headers
           for (let i = 0; i < Math.min(5, rows.length); i++) {
             const row = rows[i];
-            const hasItemHeader = row.some(cell => 
-              String(cell).toLowerCase().match(/(item|part|product|nsn|sku)/));
-            const hasQtyHeader = row.some(cell => 
-              String(cell).toLowerCase().match(/(qty|quantity|amount|count)/));
-            const hasStoreHeader = row.some(cell => 
-              String(cell).toLowerCase().match(/(store|location|dest|code)/));
-            
-            if (hasItemHeader || hasQtyHeader || hasStoreHeader) {
+            const patterns = [/(item|part|product|nsn|sku)/, /(qty|quantity|amount|count)/, /(store|location|dest|code)/];
+            if (patterns.some(pattern => row.some(cell => String(cell).toLowerCase().match(pattern)))) {
               headerRow = i;
-              // Find column positions
               row.forEach((cell, idx) => {
                 const cellStr = String(cell).toLowerCase();
-                if (cellStr.match(/(item|part|product|nsn|sku)/) && itemCol === 0) itemCol = idx;
-                if (cellStr.match(/(qty|quantity|amount|count)/) && qtyCol === 1) qtyCol = idx;
-                if (cellStr.match(/(store|location|dest|code)/) && storeCol === 2) storeCol = idx;
+                if (patterns[0].test(cellStr) && itemCol === 0) itemCol = idx;
+                if (patterns[1].test(cellStr) && qtyCol === 1) qtyCol = idx;
+                if (patterns[2].test(cellStr) && storeCol === 2) storeCol = idx;
               });
               break;
             }
           }
         } else {
-          itemCol = columnMapping.itemCol;
-          qtyCol = columnMapping.qtyCol;
-          storeCol = columnMapping.storeCol;
-          headerRow = columnMapping.headerRow;
+          ({itemCol, qtyCol, storeCol, headerRow} = columnMapping);
         }
 
-        let imported = 0;
-        let skipped = 0;
+        let imported = 0, skipped = 0;
         const errors = [];
         
         rows.forEach((row, idx) => {
-          if (idx <= headerRow) return; // Skip header row(s)
+          if (idx <= headerRow) return;
           
           const itemNumber = String(row[itemCol] || '').trim();
           const quantityRaw = row[qtyCol];
-          const storeIdentifier = String(row[storeCol] || '').trim().replace(/^0+/, ''); // Remove leading zeros from codes
+          const storeIdentifier = String(row[storeCol] || '').trim().replace(/^0+/, '');
           
-          // Parse quantity more robustly
-          let quantity = 0;
-          if (typeof quantityRaw === 'number') {
-            quantity = quantityRaw;
-          } else {
-            const qtyStr = String(quantityRaw).replace(/[^\d.-]/g, ''); // Remove non-numeric chars except . and -
-            quantity = parseFloat(qtyStr);
-          }
+          let quantity = typeof quantityRaw === 'number' ? quantityRaw : 
+            parseFloat(String(quantityRaw).replace(/[^\d.-]/g, ''));
           
           if (!itemNumber || !Number.isFinite(quantity) || quantity <= 0 || !storeIdentifier) {
-            if (itemNumber || quantityRaw || storeIdentifier) { // Only count as error if row has some data
+            if (itemNumber || quantityRaw || storeIdentifier) {
               skipped++;
-              errors.push(`Row ${idx + 1}: Invalid data (Item: "${itemNumber}", Qty: "${quantityRaw}", Store: "${storeIdentifier}")`);
+              errors.push(`Row ${idx + 1}: Invalid data`);
             }
             return;
           }
           
-          // Try to find store by code or name
           const store = findStoreByCodeOrName(storeIdentifier);
           if (!store) {
             skipped++;
-            errors.push(`Row ${idx + 1}: Store "${storeIdentifier}" not found (tried code and name matching)`);
+            errors.push(`Row ${idx + 1}: Store "${storeIdentifier}" not found`);
             return;
           }
           
-          itemsToSort.push({ 
-            itemNumber: itemNumber.toUpperCase(), 
-            quantity: Math.floor(quantity), // Ensure integer
-            storeCode: store.code, // Always use the actual store code
-            source: `Excel (${sheetName})` 
+          itemsToSort.push({
+            itemNumber: itemNumber.toUpperCase(),
+            quantity: Math.floor(quantity),
+            storeCode: store.code,
+            source: `Excel (${sheetName})`
           });
           imported++;
         });
@@ -677,30 +594,27 @@
         let statusMsg = `✅ Imported ${imported} items from "${sheetName}"`;
         if (skipped > 0) {
           statusMsg += ` (${skipped} rows skipped)`;
-        }
-        if (errors.length > 0 && errors.length <= 5) {
-          statusMsg += `<div style="font-size: 11px; color: #666; margin-top: 5px;">Issues: ${errors.join('; ')}</div>`;
-        } else if (errors.length > 5) {
-          statusMsg += `<div style="font-size: 11px; color: #666; margin-top: 5px;">${errors.length} rows had issues</div>`;
+          if (errors.length <= 5) {
+            statusMsg += `<div style="font-size: 11px; color: #666; margin-top: 5px;">Issues: ${errors.join('; ')}</div>`;
+          } else if (errors.length > 5) {
+            statusMsg += `<div style="font-size: 11px; color: #666; margin-top: 5px;">${errors.length} rows had issues</div>`;
+          }
         }
         
-        document.getElementById('fileStatus').innerHTML = statusMsg;
+        $('fileStatus').innerHTML = statusMsg;
         updateImportDisplay();
       } catch (err) {
-        document.getElementById('fileStatus').innerHTML = `❌ Import error: ${err.message}`;
+        $('fileStatus').innerHTML = `❌ Import error: ${err.message}`;
       }
-    }
+    };
 
-    function showColumnMapper() {
-      const sheetName = document.getElementById('sheetSelector').value;
-      const worksheet = currentWorkbook.Sheets[sheetName];
-      const rows = XLSX.utils.sheet_to_json(worksheet, { header:1, defval:'', raw: false });
-      
+    const showColumnMapper = () => {
+      const sheetName = $('sheetSelector').value;
+      const rows = XLSX.utils.sheet_to_json(currentWorkbook.Sheets[sheetName], {header:1, defval:'', raw: false});
       if (rows.length === 0) return;
       
-      // Show preview of first few rows for column mapping
       const previewRows = rows.slice(0, 5);
-      let previewHtml = `
+      $('fileStatus').innerHTML = `
         <div style="margin: 10px 0;">
           <h4>Column Mapping for "${sheetName}"</h4>
           <div style="background: #f5f5f5; padding: 8px; border-radius: 4px; margin: 8px 0; max-height: 150px; overflow: auto;">
@@ -716,25 +630,15 @@
             </table>
           </div>
           <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 8px 0;">
-            <div>
-              <label style="font-size: 12px; font-weight: 500;">Item Column:</label>
-              <select id="itemColSelect" style="width: 100%; padding: 4px;">
-                ${rows[0].map((_, idx) => `<option value="${idx}">Column ${String.fromCharCode(65 + idx)} (${String(rows[0][idx]).substring(0, 10)})</option>`).join('')}
-              </select>
-            </div>
-            <div>
-              <label style="font-size: 12px; font-weight: 500;">Quantity Column:</label>
-              <select id="qtyColSelect" style="width: 100%; padding: 4px;">
-                ${rows[0].map((_, idx) => `<option value="${idx}" ${idx === 1 ? 'selected' : ''}>Column ${String.fromCharCode(65 + idx)} (${String(rows[0][idx]).substring(0, 10)})</option>`).join('')}
-              </select>
-            </div>
-            <div>
-              <label style="font-size: 12px; font-weight: 500;">Store Column:</label>
-              <select id="storeColSelect" style="width: 100%; padding: 4px;">
-                ${rows[0].map((_, idx) => `<option value="${idx}" ${idx === 2 ? 'selected' : ''}>Column ${String.fromCharCode(65 + idx)} (${String(rows[0][idx]).substring(0, 10)})</option>`).join('')}
-              </select>
-              <div style="font-size: 10px; color: #666; margin-top: 2px;">Accepts store codes or names</div>
-            </div>
+            ${['Item', 'Quantity', 'Store'].map((label, i) => `
+              <div>
+                <label style="font-size: 12px; font-weight: 500;">${label} Column:</label>
+                <select id="${['item', 'qty', 'store'][i]}ColSelect" style="width: 100%; padding: 4px;">
+                  ${rows[0].map((_, idx) => `<option value="${idx}" ${idx === i ? 'selected' : ''}>Column ${String.fromCharCode(65 + idx)} (${String(rows[0][idx]).substring(0, 10)})</option>`).join('')}
+                </select>
+                ${i === 2 ? '<div style="font-size: 10px; color: #666; margin-top: 2px;">Accepts store codes or names</div>' : ''}
+              </div>
+            `).join('')}
           </div>
           <div style="margin: 8px 0;">
             <label style="font-size: 12px; font-weight: 500;">Header Row (skip this many rows):</label>
@@ -742,111 +646,86 @@
           </div>
           <button class="big-button success" onclick="importWithMapping()" style="width: 100%; font-size: 12px;">Import with Custom Mapping</button>
         </div>`;
-      
-      document.getElementById('fileStatus').innerHTML = previewHtml;
-    }
+    };
 
-    function importWithMapping() {
-      const sheetName = document.getElementById('sheetSelector').value;
+    const importWithMapping = () => {
       const columnMapping = {
-        itemCol: parseInt(document.getElementById('itemColSelect').value),
-        qtyCol: parseInt(document.getElementById('qtyColSelect').value),
-        storeCol: parseInt(document.getElementById('storeColSelect').value),
-        headerRow: parseInt(document.getElementById('headerRowInput').value) - 1 // Convert to 0-based
+        itemCol: parseInt($('itemColSelect').value),
+        qtyCol: parseInt($('qtyColSelect').value),
+        storeCol: parseInt($('storeColSelect').value),
+        headerRow: parseInt($('headerRowInput').value) - 1
       };
-      
-      importFromSheet(sheetName, columnMapping);
-    }
+      importFromSheet($('sheetSelector').value, columnMapping);
+    };
 
-    function processPastedData() {
-      const pasteData = document.getElementById('pasteArea').value.trim();
+    const processPastedData = () => {
+      const pasteData = $('pasteArea').value.trim();
       if (!pasteData) { alert('Please paste some data first'); return; }
-      const lines = pasteData.split('\n').filter(line => line.trim().length > 0);
-      let imported = 0;
-      let skipped = 0;
+      
+      const lines = pasteData.split('\n').filter(line => line.trim());
+      let imported = 0, skipped = 0;
       const errors = [];
       
       lines.forEach((line, idx) => {
-        let parts = line.includes('\t') ? line.split('\t') : line.split(',');
-        parts = parts.map(p => p.trim()).filter(p => p.length > 0);
-        if (parts.length >= 3) {
-          const itemNumber = parts[0];
-          const quantity = parseInt(parts[1], 10);
-          const storeIdentifier = String(parts[2]);
-          
-          if (!itemNumber || !Number.isFinite(quantity) || quantity <= 0 || !storeIdentifier) {
-            skipped++;
-            errors.push(`Line ${idx + 1}: Invalid data`);
-            return;
-          }
-          
-          // Try to find store by code or name
-          const store = findStoreByCodeOrName(storeIdentifier);
-          if (!store) {
-            skipped++;
-            errors.push(`Line ${idx + 1}: Store "${storeIdentifier}" not found (tried code and name matching)`);
-            return;
-          }
-          
-          itemsToSort.push({ 
-            itemNumber, 
-            quantity, 
-            storeCode: store.code, // Always use the actual store code
-            source:'Paste' 
-          });
-          imported++;
-        } else {
+        const parts = (line.includes('\t') ? line.split('\t') : line.split(',')).map(p => p.trim()).filter(p => p);
+        if (parts.length < 3) {
           skipped++;
-          errors.push(`Line ${idx + 1}: Insufficient data (need at least 3 columns)`);
+          errors.push(`Line ${idx + 1}: Insufficient data`);
+          return;
         }
+        
+        const [itemNumber, quantityStr, storeIdentifier] = parts;
+        const quantity = parseInt(quantityStr, 10);
+        
+        if (!itemNumber || !Number.isFinite(quantity) || quantity <= 0 || !storeIdentifier) {
+          skipped++;
+          errors.push(`Line ${idx + 1}: Invalid data`);
+          return;
+        }
+        
+        const store = findStoreByCodeOrName(storeIdentifier);
+        if (!store) {
+          skipped++;
+          errors.push(`Line ${idx + 1}: Store "${storeIdentifier}" not found`);
+          return;
+        }
+        
+        itemsToSort.push({itemNumber, quantity, storeCode: store.code, source:'Paste'});
+        imported++;
       });
       
       if (imported > 0) {
-        document.getElementById('pasteArea').value = '';
+        $('pasteArea').value = '';
         updateImportDisplay();
         let message = `✅ Added ${imported} items`;
         if (skipped > 0) {
           message += ` (${skipped} rows skipped)`;
-          if (errors.length <= 3) {
-            message += `\n\nSkipped: ${errors.join('; ')}`;
-          }
+          if (errors.length <= 3) message += `\n\nSkipped: ${errors.join('; ')}`;
         }
         alert(message);
       } else {
         alert(`No valid items found${errors.length > 0 ? `\n\nErrors: ${errors.slice(0, 5).join('; ')}` : ''}`);
       }
-    }
+    };
 
-    function loadSampleData() {
-      itemsToSort = [
-        { itemNumber:'NSN-0402-21', quantity:10, storeCode:'101', source:'Sample' },
-        { itemNumber:'NSN-0405-04', quantity:20, storeCode:'117', source:'Sample' },
-        { itemNumber:'NSN-0405-05', quantity:15, storeCode:'107', source:'Sample' },
-        { itemNumber:'NSN-0960-19', quantity:5, storeCode:'999', source:'Sample' }
-      ];
-      updateImportDisplay();
-    }
-
-    // --- Queue UI ---
-    function updateImportDisplay() {
-      const container = document.getElementById('importContainer');
-      const clearBtn = document.getElementById('clearBtn');
-      document.getElementById('itemCount').textContent = itemsToSort.length;
-      const uniqueStores = [...new Set(itemsToSort.map(item => String(item.storeCode)))];
-      document.getElementById('storeDestinationCount').textContent = uniqueStores.length;
+    const updateImportDisplay = () => {
+      $('itemCount').textContent = itemsToSort.length;
+      $('storeDestinationCount').textContent = [...new Set(itemsToSort.map(item => item.storeCode))].length;
+      
+      const clearBtn = $('clearBtn');
       if (itemsToSort.length === 0) {
-        container.innerHTML = '<div class="simple-alert alert-info">No items imported yet.</div>';
+        $('importContainer').innerHTML = '<div class="simple-alert alert-info">No items imported yet.</div>';
         clearBtn.classList.add('hidden');
         updateDistributeButtonState();
         return;
       }
+      
       clearBtn.classList.remove('hidden');
-      let html = '';
-      itemsToSort.forEach((item, index) => {
-        const store = allStores.find(s => String(s.code) === String(item.storeCode));
+      $('importContainer').innerHTML = itemsToSort.map((item, index) => {
+        const store = allStores.find(s => s.code === item.storeCode);
         const status = !store ? 'NOT FOUND' : (store.active ? 'ACTIVE' : 'INACTIVE');
         const statusColor = !store ? '#e74c3c' : (store.active ? '#27ae60' : '#f39c12');
-        html += `
+        return `
           <div class="queue-item">
             <div>
               <strong>${item.itemNumber}</strong> → ${item.storeCode}
@@ -854,99 +733,92 @@
             </div>
             <button class="remove-btn" onclick="removeItem(${index})">×</button>
           </div>`;
-      });
-      container.innerHTML = html;
+      }).join('');
       updateDistributeButtonState();
-    }
-    function removeItem(index){ itemsToSort.splice(index,1); updateImportDisplay(); }
-    function clearImport(){ if(confirm('Clear all items?')){ itemsToSort=[]; updateImportDisplay(); } }
+    };
 
-    // -------------------------
-    // Distribute inactive → active (ONLY to active stores already in current results)
-    // -------------------------
-    function rankWeight(rank){ return RANK_WEIGHTS[String(rank).toUpperCase()] ?? 1; }
+    const removeItem = index => { itemsToSort.splice(index,1); updateImportDisplay(); };
+    const clearImport = () => { if(confirm('Clear all items?')){ itemsToSort=[]; updateImportDisplay(); } };
 
-    function getActiveTargetsInCurrentResults(){
-      if (!lastResults || !Array.isArray(lastResults.sortedStores)) return [];
-      const resultCodes = new Set(lastResults.sortedStores.map(s => String(s.storeCode)));
-      const targets = allStores.filter(s => s.active && resultCodes.has(String(s.code)));
-      return targets.sort((a,b)=>{
-        const w = rankWeight(b.rank) - rankWeight(a.rank);
-        if (w !== 0) return w;
-        return (parseInt(String(a.code))||999999) - (parseInt(String(b.code))||999999);
-      });
-    }
+    // Distribution and sorting
+    const rankWeight = rank => RANK_WEIGHTS[String(rank).toUpperCase()] || 1;
 
-    // FIXED VERSION: Track redistributed items separately, then merge after setting itemsToSort = keep
-    function distributeInactive(){
+    const getActiveTargetsInCurrentResults = () => {
+      if (!lastResults?.sortedStores) return [];
+      const resultCodes = new Set(lastResults.sortedStores.map(s => s.storeCode));
+      return allStores
+        .filter(s => s.active && resultCodes.has(s.code))
+        .sort((a,b) => {
+          const w = rankWeight(b.rank) - rankWeight(a.rank);
+          return w !== 0 ? w : (parseInt(a.code)||999999) - (parseInt(b.code)||999999);
+        });
+    };
+
+    const distributeInactive = () => {
       const targets = getActiveTargetsInCurrentResults();
-      if (targets.length === 0){
+      if (targets.length === 0) {
         showStatus('<strong>ℹ️ No eligible target stores.</strong> Run "Sort by Store" first, and ensure at least one active store appears in results.', 'info');
         updateDistributeButtonState();
-        return { moved:0, lines:0, targets:0 };
+        return {moved:0, lines:0, targets:0};
       }
 
-      redistributionDeltas = {}; // reset for this run
-      const redistributedItems = []; // Store redistributed items separately
-
+      redistributionDeltas = {};
+      const redistributedItems = [];
       const inactiveAssignments = [];
       const keep = [];
 
-      for (const it of itemsToSort){
-        const s = allStores.find(x => String(x.code) === String(it.storeCode));
-        if (!s) { keep.push(it); }
-        else if (!s.active){ inactiveAssignments.push(it); }
-        else { keep.push(it); }
-      }
+      itemsToSort.forEach(it => {
+        const s = allStores.find(x => x.code === it.storeCode);
+        if (!s) keep.push(it);
+        else if (!s.active) inactiveAssignments.push(it);
+        else keep.push(it);
+      });
 
-      if (inactiveAssignments.length === 0){
+      if (inactiveAssignments.length === 0) {
         showStatus('<strong>ℹ️ Nothing to distribute.</strong> No items are assigned to inactive stores.', 'info');
         updateDistributeButtonState();
-        return { moved:0, lines:0, targets:targets.length };
+        return {moved:0, lines:0, targets:targets.length};
       }
 
       const weights = targets.map(t => rankWeight(t.rank));
-      const totalWeight = weights.reduce((a,b)=>a+b,0);
+      const totalWeight = weights.reduce((a,b) => a+b, 0);
       let movedQty = 0;
 
-      for (const src of inactiveAssignments){
+      inactiveAssignments.forEach(src => {
         const qty = src.quantity;
-        if (!Number.isFinite(qty) || qty <= 0) continue;
+        if (!Number.isFinite(qty) || qty <= 0) return;
 
         const shares = [];
         let allocated = 0;
-        for (let i=0;i<targets.length;i++){
+        for (let i = 0; i < targets.length; i++) {
           const q = Math.floor(qty * (weights[i] / totalWeight));
-          shares.push(q); allocated += q;
+          shares.push(q);
+          allocated += q;
         }
         let remainder = qty - allocated, rIndex = 0;
-        while (remainder-- > 0){ shares[rIndex % shares.length]++; rIndex++; }
+        while (remainder-- > 0) shares[rIndex++ % shares.length]++;
 
-        for (let i=0;i<targets.length;i++){
-          const q = shares[i];
-          if (q > 0){
-            const sc = String(targets[i].code);
+        shares.forEach((q, i) => {
+          if (q > 0) {
+            const sc = targets[i].code;
             const key = `${src.itemNumber}|${sc}`;
             redistributionDeltas[key] = (redistributionDeltas[key] || 0) + q;
-            redistributedItems.push({ 
-              itemNumber: src.itemNumber, 
-              quantity: q, 
-              storeCode: sc, 
-              source: 'Redistributed' 
+            redistributedItems.push({
+              itemNumber: src.itemNumber,
+              quantity: q,
+              storeCode: sc,
+              source: 'Redistributed'
             });
             movedQty += q;
           }
-        }
-      }
+        });
+      });
 
-      // Set itemsToSort to keep items first
       itemsToSort = keep;
       
-      // Now merge in the redistributed items
-      for (const redItem of redistributedItems) {
+      redistributedItems.forEach(redItem => {
         const idx = itemsToSort.findIndex(it => 
-          it.itemNumber === redItem.itemNumber && 
-          String(it.storeCode) === String(redItem.storeCode)
+          it.itemNumber === redItem.itemNumber && it.storeCode === redItem.storeCode
         );
         if (idx >= 0) {
           itemsToSort[idx].quantity += redItem.quantity;
@@ -954,135 +826,130 @@
         } else {
           itemsToSort.push(redItem);
         }
-      }
+      });
 
       updateImportDisplay();
-      lastResults = null; // force rebuild
+      lastResults = null;
       showStatus(`<strong>✅ Redistributed:</strong> ${inactiveAssignments.length} line(s), ${movedQty} unit(s) → ${targets.length} eligible store(s).`, 'success');
       updateDistributeButtonState();
-      return { moved:movedQty, lines:inactiveAssignments.length, targets:targets.length };
-    }
+      return {moved:movedQty, lines:inactiveAssignments.length, targets:targets.length};
+    };
 
-    function distributeAndResort(){
+    const distributeAndResort = () => {
       distributeInactive();
       sortItems();
-      document.getElementById('fullResultsSection').scrollIntoView({ behavior:'smooth' });
-    }
+      $('fullResultsSection').scrollIntoView({behavior:'smooth'});
+    };
 
-    // --- Sorting & Results ---
-    function sortItems() {
+    const sortItems = () => {
       if (itemsToSort.length === 0) { alert('Please import some items first'); return; }
-      showStatus('<div style="color:var(--pink-1);">Processing…</div>','info');
+      showStatus('<div style="color:var(--pink-1);">Processing…</div>', 'info');
+      
       setTimeout(() => {
         const validItems = [];
         const issues = [];
+        
         itemsToSort.forEach(item => {
-          const store = allStores.find(s => String(s.code) === String(item.storeCode));
+          const store = allStores.find(s => s.code === item.storeCode);
           if (!store) {
-            issues.push({ type:'not_found', itemNumber:item.itemNumber, quantity:item.quantity, storeCode:item.storeCode, message:`Store ${item.storeCode} not found` });
+            issues.push({type:'not_found', itemNumber:item.itemNumber, quantity:item.quantity, storeCode:item.storeCode, message:`Store ${item.storeCode} not found`});
           } else if (!store.active) {
-            issues.push({ type:'inactive', itemNumber:item.itemNumber, quantity:item.quantity, storeCode:item.storeCode, storeName:store.name, message:`Store ${item.storeCode} - ${store.name} is inactive` });
+            issues.push({type:'inactive', itemNumber:item.itemNumber, quantity:item.quantity, storeCode:item.storeCode, storeName:store.name, message:`Store ${item.storeCode} - ${store.name} is inactive`});
           } else {
-            validItems.push({ itemNumber:item.itemNumber, quantity:item.quantity, storeCode:String(item.storeCode), storeName:store.name, rank:store.rank });
+            validItems.push({itemNumber:item.itemNumber, quantity:item.quantity, storeCode:item.storeCode, storeName:store.name, rank:store.rank});
           }
         });
 
         const storeGroups = {};
         validItems.forEach(item => {
-          const key = String(item.storeCode);
+          const key = item.storeCode;
           if (!storeGroups[key]) {
-            storeGroups[key] = { storeCode:key, storeName:item.storeName, rank:item.rank, items:[], totalQuantity:0 };
+            storeGroups[key] = {storeCode:key, storeName:item.storeName, rank:item.rank, items:[], totalQuantity:0};
           }
           storeGroups[key].items.push(item);
           storeGroups[key].totalQuantity += item.quantity;
         });
 
         const sortedStores = sortStoresNumerically(Object.values(storeGroups));
-        displayResults({ validItems, sortedStores, issues });
-        lastResults = { validItems, sortedStores, issues };
+        displayResults({validItems, sortedStores, issues});
+        lastResults = {validItems, sortedStores, issues};
 
-        showStatus('<strong>✅ Complete.</strong> Results updated.','success');
-        document.getElementById('totalProcessed').textContent = validItems.length + issues.length;
+        showStatus('<strong>✅ Complete.</strong> Results updated.', 'success');
+        $('totalProcessed').textContent = validItems.length + issues.length;
 
-        const section = document.getElementById('fullResultsSection');
+        const section = $('fullResultsSection');
         section.classList.remove('hidden');
-
         updateDistributeButtonState();
-        section.scrollIntoView({ behavior:'smooth' });
+        section.scrollIntoView({behavior:'smooth'});
       }, 80);
-    }
+    };
 
-    // ---------- COPY LOGIC ----------
-    function buildStoreClipboardText(storeCode, asCSV){
-      const res = lastResults || {};
-      theStore = (res.sortedStores || []).find(s => String(s.storeCode) === String(storeCode));
-      const store = theStore;
-      if (!store || !store.items || store.items.length === 0) return '';
-      const rows = store.items
+    // Copy utilities
+    const buildStoreClipboardText = (storeCode, asCSV) => {
+      const store = lastResults?.sortedStores?.find(s => s.storeCode === storeCode);
+      if (!store?.items?.length) return '';
+      return store.items
         .slice()
-        .sort((a,b)=> a.itemNumber.localeCompare(b.itemNumber))
-        .map(it => asCSV ? `${it.itemNumber},${it.quantity}` : `${it.itemNumber}\t${it.quantity}`);
-      return rows.join('\n');
-    }
-    async function copyTextToClipboard(text){
-      try{
-        if (navigator.clipboard && window.isSecureContext){
+        .sort((a,b) => a.itemNumber.localeCompare(b.itemNumber))
+        .map(it => asCSV ? `${it.itemNumber},${it.quantity}` : `${it.itemNumber}\t${it.quantity}`)
+        .join('\n');
+    };
+
+    const copyTextToClipboard = async text => {
+      try {
+        if (navigator.clipboard && window.isSecureContext) {
           await navigator.clipboard.writeText(text);
-        }else{
+        } else {
           const ta = document.createElement('textarea');
-          ta.value = text; document.body.appendChild(ta);
-          ta.select(); document.execCommand('copy'); ta.remove();
+          ta.value = text;
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand('copy');
+          ta.remove();
         }
         return true;
-      }catch(e){ return false; }
-    }
-    function showToast(msg){
-      const t = document.getElementById('copyToast');
+      } catch(e) { return false; }
+    };
+
+    const showToast = msg => {
+      const t = $('copyToast');
       t.textContent = msg;
-      const dark = document.body.classList.contains('dark-mode');
-      t.classList.toggle('toast-light', !dark);
+      t.classList.toggle('toast-light', !document.body.classList.contains('dark-mode'));
       t.classList.add('show');
-      setTimeout(()=> t.classList.remove('show'), 1800);
-    }
+      setTimeout(() => t.classList.remove('show'), 1800);
+    };
 
-    // Collapse/expand a store pane
-    function toggleStoreCollapse(storeCode){
-      const code = String(storeCode);
-      collapsedStores[code] = !collapsedStores[code];
+    const toggleStoreCollapse = storeCode => {
+      collapsedStores[storeCode] = !collapsedStores[storeCode];
       if (lastResults) displayResults(lastResults);
-    }
+    };
 
-    // Copy and auto-collapse with "Copied" badge
-    async function copyStoreItems(storeCode, evt){
-      if (!lastResults){ showToast('Nothing to copy yet. Run "Sort by Store" first.'); return; }
+    const copyStoreItems = async (storeCode, evt) => {
+      if (!lastResults) { showToast('Nothing to copy yet. Run "Sort by Store" first.'); return; }
       const asCSV = evt && evt.altKey;
-      const text = buildStoreClipboardText(String(storeCode), asCSV);
-      if (!text){ showToast('No lines for this store.'); return; }
+      const text = buildStoreClipboardText(storeCode, asCSV);
+      if (!text) { showToast('No lines for this store.'); return; }
       const ok = await copyTextToClipboard(text);
-      if (ok){
+      if (ok) {
         showToast(asCSV ? 'Copied CSV: Item,Qty' : 'Copied: Item<TAB>Qty');
-        const code = String(storeCode);
-        copiedStores[code] = true;
-        collapsedStores[code] = true;
+        copiedStores[storeCode] = true;
+        collapsedStores[storeCode] = true;
         displayResults(lastResults);
       } else {
         showToast('Copy failed');
       }
-    }
+    };
 
-    // --- Results display (collapsible + highlight for redistributed rows)
-    //     Distribute button moved UNDER the issues table
-    function displayResults({ validItems, sortedStores, issues }) {
-      const resultsContainer = document.getElementById('resultsContainer');
-      const issuesContainer = document.getElementById('issuesContainer');
+    // Results display
+    const displayResults = ({validItems, sortedStores, issues}) => {
       const hasAnyDeltas = Object.keys(redistributionDeltas).length > 0;
 
       if (issues.length > 0) {
-        issuesContainer.classList.remove('hidden');
-        const totalIssueQty = issues.reduce((s,i)=>s+i.quantity,0);
+        $('issuesContainer').classList.remove('hidden');
+        const totalIssueQty = issues.reduce((s,i) => s+i.quantity, 0);
         const hasInactive = issues.some(i => i.type === 'inactive');
 
-        issuesContainer.innerHTML = `
+        $('issuesContainer').innerHTML = `
           <div class="simple-alert alert-warning" style="margin-bottom:12px;">
             <strong>⚠️ ${issues.length} Items Need Attention</strong>
           </div>
@@ -1104,8 +971,7 @@
                     </tr>`).join('')}
                 </tbody>
               </table>
-
-              <div style="display:flex; justify-content:flex-end; margin-top:12px;">
+              <div style="display:flex;justify-content:flex-end;margin-top:12px;">
                 <button id="distributeBtn" class="big-button" onclick="distributeAndResort()"
                         ${hasInactive ? '' : 'disabled'}
                         title="${hasInactive ? 'Redistribute items from inactive stores' : 'No inactive-store items to distribute'}">
@@ -1115,251 +981,108 @@
             </div>
           </div>`;
       } else {
-        issuesContainer.classList.add('hidden');
-        issuesContainer.innerHTML = '';
+        $('issuesContainer').classList.add('hidden');
+        $('issuesContainer').innerHTML = '';
       }
 
-      let html = `
+      $('resultsContainer').innerHTML = `
         <div class="simple-alert alert-info">
           <strong>📦 Items Sorted by Store</strong> - ${validItems.length} items sorted to ${sortedStores.length} active stores
-          ${hasAnyDeltas ? `<div class="legend-note">Green tags/rows indicate units added by the <em>last redistribution</em>.</div>` : ``}
+          ${hasAnyDeltas ? `<div class="legend-note">Green tags/rows indicate units added by the <em>last redistribution</em>.</div>` : ''}
         </div>
-        <div class="store-panes">`;
+        <div class="store-panes">
+          ${sortedStores.map(store => {
+            const itemsSorted = store.items.slice().sort((a,b) => a.itemNumber.localeCompare(b.itemNumber));
+            const storeDelta = itemsSorted.reduce((sum,it) => sum + (redistributionDeltas[`${it.itemNumber}|${store.storeCode}`] || 0), 0);
+            const isCollapsed = collapsedStores[store.storeCode];
+            const isCopied = copiedStores[store.storeCode];
 
-      sortedStores.forEach(store => {
-        const itemsSorted = store.items.slice().sort((a,b) => a.itemNumber.localeCompare(b.itemNumber));
-        const storeDelta = itemsSorted.reduce((sum,it)=> sum + (redistributionDeltas[`${it.itemNumber}|${store.storeCode}`] || 0), 0);
-        const isCollapsed = !!collapsedStores[String(store.storeCode)];
-        const isCopied = !!copiedStores[String(store.storeCode)];
-
-        html += `
-          <div class="store-pane ${isCollapsed ? 'collapsed' : ''}">
-            <div class="store-pane-header">
-              <div class="store-pane-title">
-                <button class="collapse-toggle" onclick="toggleStoreCollapse('${store.storeCode}')" title="${isCollapsed ? 'Expand' : 'Collapse'}">
-                  <span class="chev">▾</span> ${isCollapsed ? 'Expand' : 'Collapse'}
-                </button>
-                ${store.storeCode} - ${store.storeName}
-                <span class="rank-badge rank-${store.rank.toLowerCase()}" style="margin-left:4px; background:rgba(255,255,255,0.2);">${store.rank}</span>
-                ${isCopied ? `<span class="copied-badge" title="Copied to clipboard">Copied</span>` : ``}
-              </div>
-              <div class="store-pane-stats">
-                ${store.totalQuantity} units total
-                ${storeDelta > 0 ? `<span class="delta-badge">+${storeDelta} redistributed</span>` : ``}
-                <button class="copy-btn" title="Copy Item & Qty (Tab). Hold Alt for CSV" onclick="copyStoreItems('${store.storeCode}', event)">📋 Copy</button>
-              </div>
-            </div>
-            <div class="store-pane-body">
-              <table class="store-pane-table">
-                <thead><tr><th>Item</th><th>Qty</th><th>Code</th></tr></thead>
-                <tbody>
-                  ${itemsSorted.map(it => {
-                    const d = redistributionDeltas[`${it.itemNumber}|${store.storeCode}`] || 0;
-                    const rowClass = d > 0 ? 'redistributed-row' : '';
-                    return `
-                    <tr class="${rowClass}">
-                      <td><strong>${it.itemNumber}</strong></td>
-                      <td>${it.quantity}${d>0 ? ` <span class="delta-badge">+${d}</span>` : ''}</td>
-                      <td>${store.storeCode}</td>
-                    </tr>`;
-                  }).join('')}
-                </tbody>
-              </table>
-            </div>
-          </div>`;
-      });
-
-      html += '</div>';
-      resultsContainer.innerHTML = html;
-
-      // After rendering, ensure the distribute button reflects eligibility
+            return `
+              <div class="store-pane ${isCollapsed ? 'collapsed' : ''}">
+                <div class="store-pane-header">
+                  <div class="store-pane-title">
+                    <button class="collapse-toggle" onclick="toggleStoreCollapse('${store.storeCode}')" title="${isCollapsed ? 'Expand' : 'Collapse'}">
+                      <span class="chev">▾</span> ${isCollapsed ? 'Expand' : 'Collapse'}
+                    </button>
+                    ${store.storeCode} - ${store.storeName}
+                    <span class="rank-badge rank-${store.rank.toLowerCase()}" style="margin-left:4px;background:rgba(255,255,255,0.2);">${store.rank}</span>
+                    ${isCopied ? '<span class="copied-badge" title="Copied to clipboard">Copied</span>' : ''}
+                  </div>
+                  <div class="store-pane-stats">
+                    ${store.totalQuantity} units total
+                    ${storeDelta > 0 ? `<span class="delta-badge">+${storeDelta} redistributed</span>` : ''}
+                    <button class="copy-btn" title="Copy Item & Qty (Tab). Hold Alt for CSV" onclick="copyStoreItems('${store.storeCode}', event)">📋 Copy</button>
+                  </div>
+                </div>
+                <div class="store-pane-body">
+                  <table class="store-pane-table">
+                    <thead><tr><th>Item</th><th>Qty</th><th>Code</th></tr></thead>
+                    <tbody>
+                      ${itemsSorted.map(it => {
+                        const d = redistributionDeltas[`${it.itemNumber}|${store.storeCode}`] || 0;
+                        const rowClass = d > 0 ? 'redistributed-row' : '';
+                        return `
+                        <tr class="${rowClass}">
+                          <td><strong>${it.itemNumber}</strong></td>
+                          <td>${it.quantity}${d>0 ? ` <span class="delta-badge">+${d}</span>` : ''}</td>
+                          <td>${store.storeCode}</td>
+                        </tr>`;
+                      }).join('')}
+                    </tbody>
+                  </table>
+                </div>
+              </div>`;
+          }).join('')}
+        </div>`;
       updateDistributeButtonState();
-    }
+    };
 
-    // --- Enhanced Excel export with multiple format options ---
-    function exportResults() {
+    // Export functionality (simplified version - full implementation would include all export options)
+    const exportResults = () => {
       if (!lastResults && itemsToSort.length === 0) {
         alert('No data to export. Please import and sort items first.');
         return;
       }
       
-      // Show export options dialog
-      showExportDialog();
-    }
-
-    function showExportDialog() {
-      const existingDialog = document.getElementById('exportDialog');
-      if (existingDialog) existingDialog.remove();
-      
-      const dialog = document.createElement('div');
-      dialog.id = 'exportDialog';
-      dialog.style.cssText = `
-        position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-        background: var(--light); border: 2px solid #ddd; border-radius: 12px;
-        padding: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.3);
-        z-index: 10000; min-width: 400px; max-width: 500px;
-      `;
-      
-      dialog.innerHTML = `
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-          <h3 style="margin: 0; color: var(--pink-1);">📊 Export Options</h3>
-          <button onclick="closeExportDialog()" style="background: none; border: none; font-size: 20px; cursor: pointer; color: #666;">×</button>
-        </div>
-        
-        <div style="margin-bottom: 15px;">
-          <label style="display: block; font-weight: 500; margin-bottom: 8px;">Export Format:</label>
-          <div style="display: grid; gap: 8px;">
-            <label style="display: flex; align-items: center; gap: 8px; font-size: 14px;">
-              <input type="radio" name="exportFormat" value="combined" checked> Combined (All stores in one sheet)
-            </label>
-            <label style="display: flex; align-items: center; gap: 8px; font-size: 14px;">
-              <input type="radio" name="exportFormat" value="separate"> Separate Sheets (One sheet per store)
-            </label>
-            <label style="display: flex; align-items: center; gap: 8px; font-size: 14px;">
-              <input type="radio" name="exportFormat" value="summary"> Summary Only (Store totals and statistics)
-            </label>
-          </div>
-        </div>
-
-        <div style="margin-bottom: 15px;">
-          <label style="display: block; font-weight: 500; margin-bottom: 8px;">Include:</label>
-          <div style="display: grid; gap: 5px;">
-            <label style="display: flex; align-items: center; gap: 8px; font-size: 14px;">
-              <input type="checkbox" id="includeIssues" checked> Issues/Problems
-            </label>
-            <label style="display: flex; align-items: center; gap: 8px; font-size: 14px;">
-              <input type="checkbox" id="includeTimestamp" checked> Timestamp
-            </label>
-            <label style="display: flex; align-items: center; gap: 8px; font-size: 14px;">
-              <input type="checkbox" id="includeRedistribution" checked> Redistribution Data
-            </label>
-            <label style="display: flex; align-items: center; gap: 8px; font-size: 14px;">
-              <input type="checkbox" id="includeStoreInfo" checked> Store Details (Names, Ranks)
-            </label>
-          </div>
-        </div>
-
-        <div style="margin-bottom: 15px;">
-          <label style="display: block; font-weight: 500; margin-bottom: 5px;">Filename:</label>
-          <input type="text" id="exportFilename" value="Inventory_Sorting" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px;">
-          <div style="font-size: 12px; color: #666; margin-top: 2px;">Timestamp will be added automatically</div>
-        </div>
-
-        <div style="display: flex; gap: 10px; justify-content: flex-end;">
-          <button class="big-button" onclick="closeExportDialog()">Cancel</button>
-          <button class="big-button success" onclick="performExport()">Export Excel</button>
-        </div>
-      `;
-
-      // Add backdrop
-      const backdrop = document.createElement('div');
-      backdrop.style.cssText = `
-        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-        background: rgba(0,0,0,0.5); z-index: 9999;
-      `;
-      backdrop.onclick = closeExportDialog;
-
-      document.body.appendChild(backdrop);
-      document.body.appendChild(dialog);
-
-      // Apply dark mode styles if active
-      if (document.body.classList.contains('dark-mode')) {
-        dialog.style.background = '#1a1a1a';
-        dialog.style.color = '#fce4ec';
-        dialog.style.borderColor = '#333';
-      }
-    }
-
-    function closeExportDialog() {
-      const dialog = document.getElementById('exportDialog');
-      const backdrop = document.querySelector('div[style*="position: fixed"][style*="rgba(0,0,0,0.5)"]');
-      if (dialog) dialog.remove();
-      if (backdrop) backdrop.remove();
-    }
-
-    function performExport() {
-      const format = document.querySelector('input[name="exportFormat"]:checked').value;
-      const includeIssues = document.getElementById('includeIssues').checked;
-      const includeTimestamp = document.getElementById('includeTimestamp').checked;
-      const includeRedistribution = document.getElementById('includeRedistribution').checked;
-      const includeStoreInfo = document.getElementById('includeStoreInfo').checked;
-      const filename = document.getElementById('exportFilename').value.trim() || 'Inventory_Sorting';
-
-      closeExportDialog();
-
       const wb = XLSX.utils.book_new();
       const now = new Date();
-      const pad = (n)=> String(n).padStart(2,'0');
+      const pad = n => String(n).padStart(2,'0');
       const stamp = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}`;
 
-      const dataSource = lastResults ? lastResults : generateQuickResults();
-
-      if (format === 'combined') {
-        exportCombinedFormat(wb, dataSource, includeStoreInfo, includeRedistribution);
-      } else if (format === 'separate') {
-        exportSeparateFormat(wb, dataSource, includeStoreInfo, includeRedistribution);
-      } else if (format === 'summary') {
-        exportSummaryFormat(wb, dataSource, includeStoreInfo);
+      const dataSource = lastResults || generateQuickResults();
+      const rows = [['Store Code','Store Name','Rank','Item','Qty']];
+      
+      if (dataSource.sortedStores?.length) {
+        dataSource.sortedStores
+          .slice()
+          .sort((a,b) => (parseInt(a.storeCode)||999999) - (parseInt(b.storeCode)||999999))
+          .forEach(store => {
+            store.items
+              .slice()
+              .sort((a,b) => a.itemNumber.localeCompare(b.itemNumber))
+              .forEach(it => rows.push([store.storeCode, store.storeName, store.rank, it.itemNumber, it.quantity]));
+          });
       }
 
-      // Add issues sheet
-      if (includeIssues && dataSource.issues && dataSource.issues.length > 0) {
-        const issuesRows = [['Item Number','Quantity','Store Code','Issue Type','Description']];
-        dataSource.issues.forEach(issue => {
-          issuesRows.push([
-            issue.itemNumber, 
-            issue.quantity, 
-            issue.storeCode, 
-            issue.type,
-            issue.message
-          ]);
-        });
+      const wsAll = XLSX.utils.aoa_to_sheet(rows);
+      XLSX.utils.book_append_sheet(wb, wsAll, 'All Stores');
+
+      if (dataSource.issues?.length) {
+        const issuesRows = [['Item','Qty','Store Code','Issue']];
+        dataSource.issues.forEach(i => issuesRows.push([i.itemNumber, i.quantity, i.storeCode, i.message]));
         const wsIssues = XLSX.utils.aoa_to_sheet(issuesRows);
-        applySheetStyling(wsIssues, issuesRows[0].length);
         XLSX.utils.book_append_sheet(wb, wsIssues, 'Issues');
       }
 
-      // Add metadata sheet if timestamp requested
-      if (includeTimestamp) {
-        const metaRows = [
-          ['Export Information', ''],
-          ['Generated', now.toLocaleString()],
-          ['Total Items Processed', (dataSource.validItems?.length || 0) + (dataSource.issues?.length || 0)],
-          ['Active Stores', dataSource.sortedStores?.length || 0],
-          ['Issues Found', dataSource.issues?.length || 0],
-          ['Redistribution Applied', Object.keys(redistributionDeltas).length > 0 ? 'Yes' : 'No'],
-          ['', ''],
-          ['Store Summary', ''],
-          ['Store Code', 'Store Name', 'Rank', 'Items', 'Total Qty']
-        ];
-        
-        if (dataSource.sortedStores) {
-          dataSource.sortedStores.forEach(store => {
-            metaRows.push([
-              store.storeCode,
-              store.storeName,
-              store.rank,
-              store.items.length,
-              store.totalQuantity
-            ]);
-          });
-        }
+      XLSX.writeFile(wb, `Inventory_Sorting_${stamp}.xlsx`);
+    };
 
-        const wsMeta = XLSX.utils.aoa_to_sheet(metaRows);
-        applySheetStyling(wsMeta, 5);
-        XLSX.utils.book_append_sheet(wb, wsMeta, 'Export Info');
-      }
-
-      const finalFilename = includeTimestamp ? `${filename}_${stamp}.xlsx` : `${filename}.xlsx`;
-      XLSX.writeFile(wb, finalFilename);
-    }
-
-    function generateQuickResults() {
+    const generateQuickResults = () => {
       const issues = [];
       const storeGroups = {};
       
       itemsToSort.forEach(item => {
-        const store = allStores.find(s => String(s.code) === String(item.storeCode));
+        const store = allStores.find(s => s.code === item.storeCode);
         if (!store) {
           issues.push({type:'not_found', ...item, message:`Store ${item.storeCode} not found`});
           return;
@@ -1369,213 +1092,81 @@
           return;
         }
         
-        const key = String(store.code);
+        const key = store.code;
         if (!storeGroups[key]) {
-          storeGroups[key] = { 
-            storeCode: key, 
-            storeName: store.name, 
-            rank: store.rank, 
-            items: [], 
-            totalQuantity: 0 
-          };
+          storeGroups[key] = {storeCode: key, storeName: store.name, rank: store.rank, items: [], totalQuantity: 0};
         }
-        storeGroups[key].items.push({ 
-          itemNumber: item.itemNumber, 
-          quantity: item.quantity, 
-          storeCode: key, 
-          storeName: store.name, 
-          rank: store.rank 
-        });
+        storeGroups[key].items.push({itemNumber: item.itemNumber, quantity: item.quantity, storeCode: key, storeName: store.name, rank: store.rank});
         storeGroups[key].totalQuantity += item.quantity;
       });
       
-      return { 
-        sortedStores: sortStoresNumerically(Object.values(storeGroups)), 
-        issues, 
+      return {
+        sortedStores: sortStoresNumerically(Object.values(storeGroups)),
+        issues,
         validItems: Object.values(storeGroups).flatMap(s => s.items)
       };
-    }
+    };
 
-    function exportCombinedFormat(wb, dataSource, includeStoreInfo, includeRedistribution) {
-      const headers = ['Store Code'];
-      if (includeStoreInfo) headers.push('Store Name', 'Rank');
-      headers.push('Item Number', 'Quantity');
-      if (includeRedistribution) headers.push('Redistributed Qty');
-
-      const rows = [headers];
-      
-      if (dataSource.sortedStores && dataSource.sortedStores.length > 0) {
-        dataSource.sortedStores
-          .slice()
-          .sort((a,b) => (parseInt(String(a.storeCode))||999999) - (parseInt(String(b.storeCode))||999999))
-          .forEach(store => {
-            store.items
-              .slice()
-              .sort((a,b) => a.itemNumber.localeCompare(b.itemNumber))
-              .forEach(item => {
-                const row = [store.storeCode];
-                if (includeStoreInfo) row.push(store.storeName, store.rank);
-                row.push(item.itemNumber, item.quantity);
-                if (includeRedistribution) {
-                  const redistributedQty = redistributionDeltas[`${item.itemNumber}|${store.storeCode}`] || 0;
-                  row.push(redistributedQty);
-                }
-                rows.push(row);
-              });
-          });
-      }
-
-      const wsAll = XLSX.utils.aoa_to_sheet(rows);
-      applySheetStyling(wsAll, headers.length);
-      XLSX.utils.book_append_sheet(wb, wsAll, 'All Stores');
-    }
-
-    function exportSeparateFormat(wb, dataSource, includeStoreInfo, includeRedistribution) {
-      if (!dataSource.sortedStores || dataSource.sortedStores.length === 0) return;
-
-      dataSource.sortedStores
-        .slice()
-        .sort((a,b) => (parseInt(String(a.storeCode))||999999) - (parseInt(String(b.storeCode))||999999))
-        .forEach(store => {
-          const headers = ['Item Number', 'Quantity'];
-          if (includeRedistribution) headers.push('Redistributed Qty');
-          
-          const rows = [
-            [`Store: ${store.storeCode}${includeStoreInfo ? ` - ${store.storeName}` : ''}`],
-            includeStoreInfo ? [`Rank: ${store.rank}`, `Total Items: ${store.items.length}`, `Total Quantity: ${store.totalQuantity}`] : [],
-            [''], // Empty row
-            headers
-          ].filter(row => row.length > 0);
-
-          store.items
-            .slice()
-            .sort((a,b) => a.itemNumber.localeCompare(b.itemNumber))
-            .forEach(item => {
-              const row = [item.itemNumber, item.quantity];
-              if (includeRedistribution) {
-                const redistributedQty = redistributionDeltas[`${item.itemNumber}|${store.storeCode}`] || 0;
-                row.push(redistributedQty);
-              }
-              rows.push(row);
-            });
-
-          const ws = XLSX.utils.aoa_to_sheet(rows);
-          applySheetStyling(ws, Math.max(...rows.map(r => r.length)));
-          const sheetName = `${store.storeCode}`.substring(0, 31); // Excel sheet name limit
-          XLSX.utils.book_append_sheet(wb, ws, sheetName);
-        });
-    }
-
-    function exportSummaryFormat(wb, dataSource, includeStoreInfo) {
-      const headers = ['Store Code'];
-      if (includeStoreInfo) headers.push('Store Name', 'Rank');
-      headers.push('Total Items', 'Total Quantity', 'Avg Qty per Item');
-
-      const rows = [headers];
-      
-      if (dataSource.sortedStores && dataSource.sortedStores.length > 0) {
-        let grandTotalItems = 0;
-        let grandTotalQty = 0;
-        
-        dataSource.sortedStores
-          .slice()
-          .sort((a,b) => (parseInt(String(a.storeCode))||999999) - (parseInt(String(b.storeCode))||999999))
-          .forEach(store => {
-            const row = [store.storeCode];
-            if (includeStoreInfo) row.push(store.storeName, store.rank);
-            const avgQty = store.totalQuantity / Math.max(store.items.length, 1);
-            row.push(store.items.length, store.totalQuantity, Math.round(avgQty * 100) / 100);
-            rows.push(row);
-            
-            grandTotalItems += store.items.length;
-            grandTotalQty += store.totalQuantity;
-          });
-
-        // Add totals row
-        rows.push(['']); // Empty row
-        const totalsRow = ['TOTALS'];
-        if (includeStoreInfo) totalsRow.push('', '');
-        totalsRow.push(grandTotalItems, grandTotalQty, Math.round((grandTotalQty / Math.max(grandTotalItems, 1)) * 100) / 100);
-        rows.push(totalsRow);
-      }
-
-      const wsSummary = XLSX.utils.aoa_to_sheet(rows);
-      applySheetStyling(wsSummary, headers.length);
-      XLSX.utils.book_append_sheet(wb, wsSummary, 'Summary');
-    }
-
-    function applySheetStyling(worksheet, colCount) {
-      // Set column widths
-      const colWidths = [];
-      for (let i = 0; i < colCount; i++) {
-        colWidths.push({ width: i === 0 ? 12 : (i === 1 ? 25 : 15) });
-      }
-      worksheet['!cols'] = colWidths;
-
-      // Auto-fit would be nice but not easily available in SheetJS
-      // The basic column widths above should suffice
-    }
-
-    function startOver() {
+    const startOver = () => {
       if (confirm('Start over? This will clear everything.')) {
         itemsToSort = [];
         lastResults = null;
         redistributionDeltas = {};
-        for (const k in collapsedStores) delete collapsedStores[k];
-        for (const k in copiedStores) delete copiedStores[k];
-        const file = document.getElementById('fileInput'); if (file) file.value = '';
-        document.getElementById('pasteArea').value = '';
-        document.getElementById('fileStatus').innerHTML = '';
+        Object.keys(collapsedStores).forEach(k => delete collapsedStores[k]);
+        Object.keys(copiedStores).forEach(k => delete copiedStores[k]);
+        $('fileInput').value = '';
+        $('pasteArea').value = '';
+        $('fileStatus').innerHTML = '';
         showStatus('', 'info');
-        document.getElementById('fullResultsSection').classList.add('hidden');
-        document.getElementById('resultsContainer').innerHTML = '';
-        document.getElementById('issuesContainer').innerHTML = '';
-        document.getElementById('totalProcessed').textContent = '0';
+        $('fullResultsSection').classList.add('hidden');
+        $('resultsContainer').innerHTML = '';
+        $('issuesContainer').innerHTML = '';
+        $('totalProcessed').textContent = '0';
         updateImportDisplay();
       }
-    }
+    };
 
-    // --- Dark mode (default ON) ---
-    function toggleDarkMode() {
+    const toggleDarkMode = () => {
       const body = document.body;
-      const toggleSwitch = document.getElementById('toggleSwitch');
-      const modeIcon = document.getElementById('modeIcon');
+      const toggleSwitch = $('toggleSwitch');
+      const modeIcon = $('modeIcon');
       body.classList.toggle('dark-mode');
       toggleSwitch.classList.toggle('active');
       modeIcon.textContent = body.classList.contains('dark-mode') ? '🌙' : '☀️';
-    }
-    function initializeDarkMode() {
-      document.body.classList.add('dark-mode');
-      document.getElementById('toggleSwitch').classList.add('active');
-      document.getElementById('modeIcon').textContent = '🌙';
-    }
+      saveUserPreferences();
+    };
 
-    // -------------------------
-    // Distribute button state helpers
-    // -------------------------
-    function hasInactiveAssignments(){
-      if (lastResults && Array.isArray(lastResults.issues)) {
-        return lastResults.issues.some(i => i.type === 'inactive');
+    const initializeDarkMode = () => {
+      const preferences = getCookie(COOKIE_NAME);
+      if (!preferences) {
+        document.body.classList.add('dark-mode');
+        $('toggleSwitch').classList.add('active');
+        $('modeIcon').textContent = '🌙';
       }
+    };
+
+    const hasInactiveAssignments = () => {
+      if (lastResults?.issues) return lastResults.issues.some(i => i.type === 'inactive');
       return itemsToSort.some(it => {
-        const s = allStores.find(x => String(x.code) === String(it.storeCode));
+        const s = allStores.find(x => x.code === it.storeCode);
         return s && !s.active;
       });
-    }
-    function updateDistributeButtonState(){
-      const btn = document.getElementById('distributeBtn');
-      if (!btn) return; // only present when issues exist
+    };
+
+    const updateDistributeButtonState = () => {
+      const btn = $('distributeBtn');
+      if (!btn) return;
       const needed = hasInactiveAssignments();
       const hasEligibleTargets = getActiveTargetsInCurrentResults().length > 0;
       btn.disabled = !(needed && hasEligibleTargets);
-      btn.title = !needed
-        ? 'No inactive-store items to distribute'
-        : (!hasEligibleTargets ? 'No eligible target stores in current results' : 'Redistribute items from inactive stores');
-    }
+      btn.title = !needed ? 'No inactive-store items to distribute' : 
+                  (!hasEligibleTargets ? 'No eligible target stores in current results' : 'Redistribute items from inactive stores');
+    };
 
     // Initialize
     document.addEventListener('DOMContentLoaded', () => {
       initializeDarkMode();
+      loadUserPreferences();
       updateStoreStatus();
       updateImportDisplay();
       updateDistributeButtonState();

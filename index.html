@@ -198,6 +198,11 @@
                 <input type="checkbox" id="newStoreActive" checked/> Start as active
               </label>
               <button class="big-button success" onclick="addNewStore()">Add Store</button>
+
+              <!-- New: Re-add default stores button -->
+              <button class="big-button warning" onclick="restoreDefaults()" style="margin-top:10px;">
+                Re-Add Default Stores
+              </button>
             </div>
           </div>
         </div>
@@ -294,7 +299,7 @@
         
         <h3 style="color:var(--pink-1);margin:20px 0 10px 0;">🚀 Sort & Distribute</h3>
         <p><strong>Sort by Store:</strong> Organizes items by destination and identifies issues (inactive stores, missing stores).</p>
-        <p><strong>Distribute Problematic → Active:</strong> Automatically redistributes items from inactive or missing stores to active ones using rank-weighted distribution (higher ranks get more items).</p>
+        <p><strong>Distribute Problem → Active:</strong> Automatically redistributes items from inactive or unknown stores to active ones using rank-weighted distribution.</p>
         
         <h3 style="color:var(--pink-1);margin:20px 0 10px 0;">📋 Copy & Export</h3>
         <p><strong>Copy Store Items:</strong> Click 📋 Copy to copy item lists (Tab-separated). Hold Alt for CSV format.</p>
@@ -304,7 +309,7 @@
         <p>• Dark/Light mode toggle<br>• Collapsible store sections<br>• Real-time validation<br>• Rank-weighted redistribution<br>• Automatic store detection by code or name</p>
         
         <div class="pro-tip">
-          <strong>💡 Pro Tip:</strong> Items assigned to inactive stores will be flagged. Use "Distribute Inactive → Active" to automatically reallocate them based on store priority ranks.
+          <strong>💡 Pro Tip:</strong> Items assigned to inactive or unknown stores will be flagged. Use "Distribute Problem → Active" to automatically reallocate them based on store priority ranks.
         </div>
       </div>
     </div>
@@ -333,14 +338,8 @@
     const COOKIE_NAME = 'allocationBuddyPrefs';
     const COOKIE_DAYS = 365;
 
-    // State
-    let itemsToSort = [];
-    let lastResults = null;
-    let redistributionDeltas = {};
-    let currentWorkbook = null;
-    const collapsedStores = {};
-    const copiedStores = {};
-    let allStores = [
+    // ---------- Defaults & helpers ----------
+    const DEFAULT_STORES = Object.freeze([
       {code:'101',name:'WATERLOO 1',rank:'C',active:true},
       {code:'102',name:'KITCHENER 1',rank:'B',active:true},
       {code:'103',name:'CAMBRIDGE',rank:'B',active:true},
@@ -375,7 +374,17 @@
       {code:'134',name:'PETERBOROUGH',rank:'B',active:true},
       {code:'135',name:'THUNDER BAY',rank:'A',active:true},
       {code:'199',name:'STAG WEB',rank:'AA',active:true}
-    ];
+    ]);
+    const cloneDefaults = () => DEFAULT_STORES.map(s => ({...s}));
+
+    // State
+    let itemsToSort = [];
+    let lastResults = null;
+    let redistributionDeltas = {};
+    let currentWorkbook = null;
+    const collapsedStores = {};
+    const copiedStores = {};
+    let allStores = cloneDefaults(); // start from defaults
 
     // Utilities
     const setCookie = (name, value, days = COOKIE_DAYS) => {
@@ -445,11 +454,14 @@
         $('modeIcon').textContent = isDark ? '🌙' : '☀️';
       }
 
-      // Store states
+      // Store states (only apply active flags if they match existing codes)
       if (Array.isArray(prefs.storeStates)) {
+        const codes = new Set(allStores.map(s => s.code));
         prefs.storeStates.forEach(savedStore => {
-          const store = allStores.find(s => s.code === savedStore.code);
-          if (store) store.active = savedStore.active;
+          if (codes.has(savedStore.code)) {
+            const store = allStores.find(s => s.code === savedStore.code);
+            if (store) store.active = !!savedStore.active;
+          }
         });
       }
 
@@ -559,6 +571,18 @@
       saveUserPreferences();
     };
 
+    // New: re-add default stores on demand
+    const restoreDefaults = () => {
+      if (!confirm('Re-add all default stores? This will overwrite your current list.')) return;
+      allStores = cloneDefaults();
+      // clear stale prefs so defaults persist on reload
+      document.cookie = "allocationBuddyPrefs=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Strict";
+      updateStoreStatus();
+      updateDistributeButtonState();
+      saveUserPreferences();
+      showStatus('<strong>✅ Default stores restored.</strong>', 'success');
+    };
+
     // Import handling
     const handleFileUpload = event => {
       const file = event.target.files[0];
@@ -597,10 +621,11 @@
 
     const importSelectedSheet = () => $('sheetSelector') && importFromSheet($('sheetSelector').value);
 
+    // Keep unknown stores instead of skipping
     const importFromSheet = (sheetName, columnMapping = null) => {
       try {
-        let debugOutput = ''; // Prevent any undefined variable errors
-        
+        let debugOutput = '';
+
         const rows = XLSX.utils.sheet_to_json(currentWorkbook.Sheets[sheetName], {header:1, defval:'', raw: false});
         if (rows.length === 0) {
           $('fileStatus').innerHTML = '⚠️ Sheet is empty';
@@ -610,7 +635,6 @@
         let headerRow = -1, itemCol = 0, qtyCol = 1, storeCol = 2;
         
         if (!columnMapping) {
-          // Auto-detect headers with your specific patterns
           for (let i = 0; i < Math.min(5, rows.length); i++) {
             const row = rows[i];
             const itemPatterns = /(item|style|item\s*no|item\s*number)/i;
@@ -620,54 +644,20 @@
             
             row.forEach((cell, idx) => {
               const cellStr = String(cell).toLowerCase().trim();
-              
-              // Check for item patterns
-              if (itemPatterns.test(cellStr) && !foundItem) {
-                itemCol = idx;
-                foundItem = true;
-              }
-              
-              // Check for quantity patterns  
-              if (qtyPatterns.test(cellStr) && !foundQty) {
-                qtyCol = idx;
-                foundQty = true;
-              }
-              
-              // Check for store column - look for 3-digit numbers or store-like headers
+              if (itemPatterns.test(cellStr) && !foundItem) { itemCol = idx; foundItem = true; }
+              if (qtyPatterns.test(cellStr) && !foundQty)  { qtyCol  = idx; foundQty  = true; }
               if (!foundStore) {
-                // Check if this cell contains a 3-digit number (likely store codes)
-                if (/^\d{3}$/.test(cellStr)) {
-                  storeCol = idx;
-                  foundStore = true;
-                }
-                // Also check traditional store headers as backup
-                else if (/(store|location|dest|code)/i.test(cellStr)) {
-                  storeCol = idx;
-                  foundStore = true;
-                }
+                if (/^\d{3}$/.test(cellStr)) { storeCol = idx; foundStore = true; }
+                else if (/(store|location|dest|code)/i.test(cellStr)) { storeCol = idx; foundStore = true; }
               }
             });
             
-            // If we found item and qty patterns, this is likely the header row
-            if (foundItem || foundQty) {
-              headerRow = i;
-              break;
-            }
-            
-            // If we found 3-digit numbers but no clear headers, assume no header row
-            if (foundStore && !foundItem && !foundQty && i === 0) {
-              headerRow = -1; // No header row, start from row 0
-              break;
-            }
+            if (foundItem || foundQty) { headerRow = i; break; }
+            if (foundStore && !foundItem && !foundQty && i === 0) { headerRow = -1; break; }
           }
           
-          // If no header detected, check first data row for 3-digit store codes
           if (headerRow === -1 && rows.length > 0) {
-            rows[0].forEach((cell, idx) => {
-              if (/^\d{3}$/.test(String(cell).trim())) {
-                storeCol = idx;
-              }
-            });
+            rows[0].forEach((cell, idx) => { if (/^\d{3}$/.test(String(cell).trim())) storeCol = idx; });
           }
         } else {
           ({itemCol, qtyCol, storeCol, headerRow} = columnMapping);
@@ -681,23 +671,28 @@
           
           const itemNumber = String(row[itemCol] || '').trim();
           const quantityRaw = row[qtyCol];
-          const storeIdentifier = String(row[storeCol] || '').trim().replace(/^0+/, '');
+          const storeIdentifierRaw = String(row[storeCol] || '').trim();
+          const storeIdentifier = storeIdentifierRaw.replace(/^0+/, '');
           
           let quantity = typeof quantityRaw === 'number' ? quantityRaw : 
             parseFloat(String(quantityRaw).replace(/[^\d.-]/g, ''));
           
           if (!itemNumber || !Number.isFinite(quantity) || quantity <= 0 || !storeIdentifier) {
             if (itemNumber || quantityRaw || storeIdentifier) {
-              skipped++;
-              errors.push(`Row ${idx + 1}: Invalid data`);
+              skipped++; errors.push(`Row ${idx + 1}: Invalid data`);
             }
             return;
           }
           
           const store = findStoreByCodeOrName(storeIdentifier);
           if (!store) {
-            skipped++;
-            errors.push(`Row ${idx + 1}: Store "${storeIdentifier}" not found`);
+            itemsToSort.push({
+              itemNumber: itemNumber.toUpperCase(),
+              quantity: Math.floor(quantity),
+              storeCode: storeIdentifier,
+              source: `Excel (${sheetName})`
+            });
+            imported++;
             return;
           }
           
@@ -720,7 +715,7 @@
           }
         }
         
-        statusMsg += debugOutput; // Add the debug information
+        statusMsg += debugOutput;
         
         $('fileStatus').innerHTML = statusMsg;
         updateImportDisplay();
@@ -806,7 +801,6 @@
         
         const store = findStoreByCodeOrName(storeIdentifier);
         if (!store) {
-          // Import with invalid store code - will be flagged during sorting
           itemsToSort.push({itemNumber, quantity, storeCode: storeIdentifier, source:'Paste'});
           imported++;
           return;
@@ -876,7 +870,15 @@
         });
     };
 
-    const distributeInactive = () => {
+    const hasProblemAssignments = () => {
+      if (lastResults?.issues) return lastResults.issues.some(i => i.type === 'inactive' || i.type === 'not_found');
+      return itemsToSort.some(it => {
+        const s = allStores.find(x => x.code === it.storeCode);
+        return !s || (s && !s.active);
+      });
+    };
+
+    const distributeProblemItems = () => {
       const targets = getActiveTargetsInCurrentResults();
       if (targets.length === 0) {
         showStatus('<strong>ℹ️ No eligible target stores.</strong> Run "Sort by Store" first, and ensure at least one active store appears in results.', 'info');
@@ -886,18 +888,16 @@
 
       redistributionDeltas = {};
       const redistributedItems = [];
-      const inactiveAssignments = [];
+      const problemAssignments = [];
       const keep = [];
 
       itemsToSort.forEach(it => {
         const s = allStores.find(x => x.code === it.storeCode);
-        if (!s) keep.push(it);
-        else if (!s.active) inactiveAssignments.push(it);
-        else keep.push(it);
+        if (!s || !s.active) problemAssignments.push(it); else keep.push(it);
       });
 
-      if (inactiveAssignments.length === 0) {
-        showStatus('<strong>ℹ️ Nothing to distribute.</strong> No items are assigned to inactive stores.', 'info');
+      if (problemAssignments.length === 0) {
+        showStatus('<strong>ℹ️ Nothing to distribute.</strong> No items are assigned to inactive or unknown stores.', 'info');
         updateDistributeButtonState();
         return {moved:0, lines:0, targets:targets.length};
       }
@@ -906,7 +906,7 @@
       const totalWeight = weights.reduce((a,b) => a+b, 0);
       let movedQty = 0;
 
-      inactiveAssignments.forEach(src => {
+      problemAssignments.forEach(src => {
         const qty = src.quantity;
         if (!Number.isFinite(qty) || qty <= 0) return;
 
@@ -952,13 +952,13 @@
 
       updateImportDisplay();
       lastResults = null;
-      showStatus(`<strong>✅ Redistributed:</strong> ${inactiveAssignments.length} line(s), ${movedQty} unit(s) → ${targets.length} eligible store(s).`, 'success');
+      showStatus(`<strong>✅ Redistributed:</strong> ${problemAssignments.length} line(s), ${movedQty} unit(s) → ${targets.length} eligible store(s).`, 'success');
       updateDistributeButtonState();
-      return {moved:movedQty, lines:inactiveAssignments.length, targets:targets.length};
+      return {moved:movedQty, lines:problemAssignments.length, targets:targets.length};
     };
 
     const distributeAndResort = () => {
-      distributeInactive();
+      distributeProblemItems();
       sortItems();
       $('fullResultsSection').scrollIntoView({behavior:'smooth'});
     };
@@ -1069,7 +1069,7 @@
       if (issues.length > 0) {
         $('issuesContainer').classList.remove('hidden');
         const totalIssueQty = issues.reduce((s,i) => s+i.quantity, 0);
-        const hasInactive = issues.some(i => i.type === 'inactive');
+        const hasProblems = issues.some(i => i.type === 'inactive' || i.type === 'not_found');
 
         $('issuesContainer').innerHTML = `
           <div class="simple-alert alert-warning" style="margin-bottom:12px;">
@@ -1095,9 +1095,9 @@
               </table>
               <div style="display:flex;justify-content:flex-end;margin-top:12px;">
                 <button id="distributeBtn" class="big-button" onclick="distributeAndResort()"
-                        ${hasInactive ? '' : 'disabled'}
-                        title="${hasInactive ? 'Redistribute items from inactive stores' : 'No inactive-store items to distribute'}">
-                  Distribute Inactive → Active (Rank-Weighted)
+                        ${hasProblems ? '' : 'disabled'}
+                        title="${hasProblems ? 'Redistribute items from inactive or unknown stores' : 'No problem items to distribute'}">
+                  Distribute Problem → Active (Rank-Weighted)
                 </button>
               </div>
             </div>
@@ -1159,7 +1159,7 @@
       updateDistributeButtonState();
     };
 
-    // Export functionality (simplified version - full implementation would include all export options)
+    // Export functionality
     const exportResults = () => {
       if (!lastResults && itemsToSort.length === 0) {
         alert('No data to export. Please import and sort items first.');
@@ -1232,85 +1232,34 @@
     const startOver = () => {
       if (confirm('Start over? This will clear everything.')) {
         try {
-          console.log('Starting reset...');
-          
-          // Clear data arrays
-          itemsToSort.length = 0; // Clear array in place
+          itemsToSort.length = 0;
           lastResults = null;
           redistributionDeltas = {};
           currentWorkbook = null;
-          
-          // Clear state objects completely
           for (let key in collapsedStores) delete collapsedStores[key];
           for (let key in copiedStores) delete copiedStores[key];
-          
-          console.log('Data cleared...');
-          
-          // Reset ALL form inputs
           const fileInput = $('fileInput');
           const pasteArea = $('pasteArea');
           const fileStatus = $('fileStatus');
-          const newStoreCode = $('newStoreCode');
-          const newStoreName = $('newStoreName');
-          const newStoreRank = $('newStoreRank');
-          const newStoreActive = $('newStoreActive');
-          
-          if (fileInput) {
-            fileInput.value = '';
-            fileInput.files = null;
-          }
+          if (fileInput) { fileInput.value = ''; fileInput.files = null; }
           if (pasteArea) pasteArea.value = '';
           if (fileStatus) fileStatus.innerHTML = '';
-          if (newStoreCode) newStoreCode.value = '';
-          if (newStoreName) newStoreName.value = '';
-          if (newStoreRank) newStoreRank.value = 'B';
-          if (newStoreActive) newStoreActive.checked = true;
-          
-          console.log('Forms cleared...');
-          
-          // Clear ALL status messages and containers
           const sortingStatus = $('sortingStatus');
           const resultsStatus = $('resultsStatus');
           if (sortingStatus) sortingStatus.innerHTML = '';
           if (resultsStatus) resultsStatus.innerHTML = '';
-          
-          // Hide and clear results sections
           const fullResultsSection = $('fullResultsSection');
           const resultsContainer = $('resultsContainer');
           const issuesContainer = $('issuesContainer');
-          
           if (fullResultsSection) fullResultsSection.classList.add('hidden');
           if (resultsContainer) resultsContainer.innerHTML = '';
-          if (issuesContainer) {
-            issuesContainer.innerHTML = '';
-            issuesContainer.classList.add('hidden');
-          }
-          
-          // Reset all counters
-          const counters = ['itemCount', 'storeDestinationCount', 'totalProcessed'];
-          counters.forEach(id => {
-            const el = $(id);
-            if (el) el.textContent = '0';
-          });
-          
-          console.log('UI cleared...');
-          
-          // Force update displays
+          if (issuesContainer) { issuesContainer.innerHTML = ''; issuesContainer.classList.add('hidden'); }
+          ['itemCount','storeDestinationCount','totalProcessed'].forEach(id => $(id).textContent = '0');
           updateImportDisplay();
           updateDistributeButtonState();
           updateStoreCounts();
-          
-          console.log('Displays updated...');
-          
-          // Show success message
-          setTimeout(() => {
-            showStatus('<strong>✅ Reset complete.</strong> Ready for new data.', 'success');
-          }, 100);
-          
-          console.log('Reset completed successfully');
-          
+          setTimeout(() => showStatus('<strong>✅ Reset complete.</strong> Ready for new data.', 'success'), 100);
         } catch (error) {
-          console.error('Error during reset:', error);
           alert(`Reset encountered an error: ${error.message}. Please refresh the page.`);
         }
       }
@@ -1335,32 +1284,20 @@
       }
     };
 
-    const hasInactiveAssignments = () => {
-      if (lastResults?.issues) return lastResults.issues.some(i => i.type === 'inactive');
-      return itemsToSort.some(it => {
-        const s = allStores.find(x => x.code === it.storeCode);
-        return s && !s.active;
-      });
-    };
-
     const updateDistributeButtonState = () => {
       const btn = $('distributeBtn');
       if (!btn) return;
-      const needed = hasInactiveAssignments();
+      const needed = hasProblemAssignments();
       const hasEligibleTargets = getActiveTargetsInCurrentResults().length > 0;
       btn.disabled = !(needed && hasEligibleTargets);
-      btn.title = !needed ? 'No inactive-store items to distribute' : 
-                  (!hasEligibleTargets ? 'No eligible target stores in current results' : 'Redistribute items from inactive stores');
+      btn.title = !needed ? 'No inactive or unknown-store items to distribute' : 
+                  (!hasEligibleTargets ? 'No eligible target stores in current results' : 'Redistribute problem items to active stores (rank-weighted)');
     };
 
-    // Close help overlay with Escape key
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && $('helpOverlay').style.display === 'flex') {
-        hideHelpOverlay();
-      }
+      if (e.key === 'Escape' && $('helpOverlay').style.display === 'flex') hideHelpOverlay();
     });
 
-    // Initialize
     document.addEventListener('DOMContentLoaded', () => {
       initializeDarkMode();
       loadUserPreferences();

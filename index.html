@@ -148,7 +148,7 @@
       <p>Compact dashboard for sorting inventory by store destination</p>
       <div class="dark-mode-toggle">
         <span class="toggle-icon" id="modeIcon">🌙</span>
-        <div class="toggle-switch" onclick="toggleDarkMode()" id="toggleSwitch" aria-label="Toggle dark mode"></div>
+        <div class="toggle-switch" id="toggleSwitch" aria-label="Toggle dark mode"></div>
       </div>
     </div>
 
@@ -157,8 +157,8 @@
         <div class="card">
           <h3>🪪 Store Management</h3>
           <div class="import-tabs">
-            <button class="import-tab active" onclick="switchTab('store','manage')">📋 Manage Stores</button>
-            <button class="import-tab" onclick="switchTab('store','add')">➕ Add Store</button>
+            <button class="import-tab active" id="storeTabManage">📋 Manage Stores</button>
+            <button class="import-tab" id="storeTabAdd">➕ Add Store</button>
           </div>
 
           <div class="import-content active" id="manage-content">
@@ -166,8 +166,8 @@
               <span>Active: <strong id="activeStoreCount">0</strong></span>
               <span>Inactive: <strong id="inactiveStoreCount">0</strong></span>
               <div>
-                <button class="big-button" onclick="toggleAllStores(true)" style="padding:4px 8px;font-size:12px;margin-right:5px;">All</button>
-                <button class="big-button" onclick="toggleAllStores(false)" style="padding:4px 8px;font-size:12px;">None</button>
+                <button class="big-button" id="toggleAllBtn" style="padding:4px 8px;font-size:12px;margin-right:5px;">All</button>
+                <button class="big-button" id="toggleNoneBtn" style="padding:4px 8px;font-size:12px;">None</button>
               </div>
             </div>
             <div class="store-list" id="storeStatusContainer"></div>
@@ -186,7 +186,7 @@
               <label style="display:flex;align-items:center;gap:8px;font-size:14px;">
                 <input type="checkbox" id="newStoreActive" checked/> Start as active
               </label>
-              <button class="big-button success" onclick="addNewStore()">Add Store</button>
+              <button class="big-button success" id="addStoreBtn">Add Store</button>
             </div>
           </div>
         </div>
@@ -203,8 +203,8 @@
         <div class="card">
           <h3>📤 Import Data</h3>
           <div class="import-tabs">
-            <button class="import-tab active" onclick="switchTab('import','upload')">📄 Upload Excel</button>
-            <button class="import-tab" onclick="switchTab('import','paste')">📋 Paste Data</button>
+            <button class="import-tab active" id="importTabUpload">📄 Upload Excel</button>
+            <button class="import-tab" id="importTabPaste">📋 Paste Data</button>
           </div>
 
           <div class="import-content active" id="upload-content">
@@ -212,8 +212,8 @@
               <h4>Upload Excel File</h4>
               <p style="margin:10px 0;font-size:14px;color:#666;">Choose .xlsx, .xlsm, or .xls files</p>
               <p style="margin:5px 0;font-size:12px;color:#888;">✨ Supports store codes OR store names</p>
-              <input type="file" id="fileInput" accept=".xlsx,.xlsm,.xls" onchange="handleFileUpload(event)" style="display:none;"/>
-              <button class="big-button" onclick="$('#fileInput').click()">Choose File</button>
+              <input type="file" id="fileInput" accept=".xlsx,.xlsm,.xls" style="display:none;"/>
+              <button class="big-button" id="chooseFileBtn">Choose File</button>
               <div id="fileStatus" style="font-size:12px;margin-top:10px;"></div>
             </div>
           </div>
@@ -225,7 +225,7 @@
               <p style="font-size:12px;color:#888;">Format: ItemNumber, Quantity, StoreCode/StoreName</p>
             </div>
             <textarea id="pasteArea" placeholder="Example:&#10;NSN-0402-21, 10, 101&#10;NSN-0405-04, 20, NIAGARA 1&#10;NSN-0405-05, 15, MISSISSAUGA" style="width:100%;height:100px;font-size:12px;padding:10px;border:1px solid #ddd;border-radius:6px;font-family:monospace;"></textarea>
-            <button class="big-button success" onclick="processPastedData()" style="margin-top:10px;width:100%;">Process Data</button>
+            <button class="big-button success" id="processPasteBtn" style="margin-top:10px;width:100%;">Process Data</button>
           </div>
         </div>
 
@@ -235,16 +235,16 @@
             <div class="queue" id="importContainer">
               <div class="simple-alert alert-info">No items imported yet.</div>
             </div>
-            <button class="big-button danger hidden" onclick="clearImport()" id="clearBtn" style="margin-top:10px;">Clear All</button>
+            <button class="big-button danger hidden" id="clearBtn" style="margin-top:10px;">Clear All</button>
           </div>
 
           <div class="card">
             <h3>🚀 Actions</h3>
             <div id="sortingStatus" style="margin-bottom:15px;"></div>
-            <button class="big-button success large" onclick="sortItems()" style="width:100%;margin-bottom:10px;">Sort by Store</button>
+            <button class="big-button success large" id="sortBtn" style="width:100%;margin-bottom:10px;">Sort by Store</button>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-              <button class="big-button" onclick="exportResults()">Export</button>
-              <button class="big-button warning" onclick="startOver()">Reset</button>
+              <button class="big-button" id="exportBtn">Export</button>
+              <button class="big-button warning" id="resetBtn">Reset</button>
             </div>
           </div>
         </div>
@@ -430,13 +430,13 @@
       $('storeStatusContainer').innerHTML = sortStoresNumerically(allStores)
         .map(store => `
           <div class="store-item">
-            <input type="checkbox" ${store.active ? 'checked' : ''} onchange="toggleStoreStatus('${store.code}', this.checked)"/>
+            <input type="checkbox" ${store.active ? 'checked' : ''} class="store-status-checkbox" data-store-code="${store.code}"/>
             <div class="info">
               <span class="code">${store.code}</span>
               <span class="name">${store.name}</span>
               <span class="rank-badge rank-${store.rank.toLowerCase()}">${store.rank}</span>
             </div>
-            <button class="remove-btn" onclick="removeStore('${store.code}')">×</button>
+            <button class="remove-btn remove-store-btn" data-store-code="${store.code}">×</button>
           </div>`)
         .join('');
       updateDistributeButtonState();
@@ -516,9 +516,9 @@
           <label style="display: block; margin-bottom: 5px; font-weight: 500;">Select Sheet to Import:</label>
           <div style="display: flex; gap: 10px; align-items: center;">
             <select id="sheetSelector" style="flex: 1; padding: 6px; border: 1px solid #ddd; border-radius: 4px;">${options}</select>
-            <button class="big-button" onclick="importSelectedSheet()" style="padding: 6px 12px; font-size: 12px;">Import</button>
+            <button class="big-button" id="importSheetBtn" style="padding: 6px 12px; font-size: 12px;">Import</button>
           </div>
-          <button class="big-button" onclick="showColumnMapper()" style="margin-top: 8px; width: 100%; font-size: 12px;">Advanced Import (Column Mapping)</button>
+          <button class="big-button" id="showMapperBtn" style="margin-top: 8px; width: 100%; font-size: 12px;">Advanced Import (Column Mapping)</button>
         </div>`;
     };
 
@@ -644,7 +644,7 @@
             <label style="font-size: 12px; font-weight: 500;">Header Row (skip this many rows):</label>
             <input type="number" id="headerRowInput" value="0" min="0" max="10" style="width: 60px; padding: 4px;">
           </div>
-          <button class="big-button success" onclick="importWithMapping()" style="width: 100%; font-size: 12px;">Import with Custom Mapping</button>
+          <button class="big-button success" id="importMappingBtn" style="width: 100%; font-size: 12px;">Import with Custom Mapping</button>
         </div>`;
     };
 
@@ -731,7 +731,7 @@
               <strong>${item.itemNumber}</strong> → ${item.storeCode}
               <div class="details">Qty: ${item.quantity} | <span style="color:${statusColor};">${status}</span></div>
             </div>
-            <button class="remove-btn" onclick="removeItem(${index})">×</button>
+            <button class="remove-btn remove-item-btn" data-index="${index}">×</button>
           </div>`;
       }).join('');
       updateDistributeButtonState();
@@ -972,7 +972,7 @@
                 </tbody>
               </table>
               <div style="display:flex;justify-content:flex-end;margin-top:12px;">
-                <button id="distributeBtn" class="big-button" onclick="distributeAndResort()"
+                <button id="distributeBtn" class="big-button"
                         ${hasInactive ? '' : 'disabled'}
                         title="${hasInactive ? 'Redistribute items from inactive stores' : 'No inactive-store items to distribute'}">
                   Distribute Inactive → Active (Rank-Weighted)
@@ -1001,7 +1001,7 @@
               <div class="store-pane ${isCollapsed ? 'collapsed' : ''}">
                 <div class="store-pane-header">
                   <div class="store-pane-title">
-                    <button class="collapse-toggle" onclick="toggleStoreCollapse('${store.storeCode}')" title="${isCollapsed ? 'Expand' : 'Collapse'}">
+                    <button class="collapse-toggle" data-store-code="${store.storeCode}" title="${isCollapsed ? 'Expand' : 'Collapse'}">
                       <span class="chev">▾</span> ${isCollapsed ? 'Expand' : 'Collapse'}
                     </button>
                     ${store.storeCode} - ${store.storeName}
@@ -1011,7 +1011,7 @@
                   <div class="store-pane-stats">
                     ${store.totalQuantity} units total
                     ${storeDelta > 0 ? `<span class="delta-badge">+${storeDelta} redistributed</span>` : ''}
-                    <button class="copy-btn" title="Copy Item & Qty (Tab). Hold Alt for CSV" onclick="copyStoreItems('${store.storeCode}', event)">📋 Copy</button>
+                    <button class="copy-btn" title="Copy Item & Qty (Tab). Hold Alt for CSV" data-store-code="${store.storeCode}">📋 Copy</button>
                   </div>
                 </div>
                 <div class="store-pane-body">
@@ -1170,6 +1170,62 @@
       updateStoreStatus();
       updateImportDisplay();
       updateDistributeButtonState();
+
+      // Static event handlers
+      $('toggleSwitch').addEventListener('click', toggleDarkMode);
+      $('storeTabManage').addEventListener('click', () => switchTab('store','manage'));
+      $('storeTabAdd').addEventListener('click', () => switchTab('store','add'));
+      $('importTabUpload').addEventListener('click', () => switchTab('import','upload'));
+      $('importTabPaste').addEventListener('click', () => switchTab('import','paste'));
+      $('toggleAllBtn').addEventListener('click', () => toggleAllStores(true));
+      $('toggleNoneBtn').addEventListener('click', () => toggleAllStores(false));
+      $('addStoreBtn').addEventListener('click', addNewStore);
+      $('fileInput').addEventListener('change', handleFileUpload);
+      $('chooseFileBtn').addEventListener('click', () => $('fileInput').click());
+      $('processPasteBtn').addEventListener('click', processPastedData);
+      $('clearBtn').addEventListener('click', clearImport);
+      $('sortBtn').addEventListener('click', sortItems);
+      $('exportBtn').addEventListener('click', exportResults);
+      $('resetBtn').addEventListener('click', startOver);
+
+      // Delegated event handlers
+      $('storeStatusContainer').addEventListener('change', e => {
+        if (e.target.classList.contains('store-status-checkbox')) {
+          toggleStoreStatus(e.target.dataset.storeCode, e.target.checked);
+        }
+      });
+      $('storeStatusContainer').addEventListener('click', e => {
+        if (e.target.classList.contains('remove-store-btn')) {
+          removeStore(e.target.dataset.storeCode);
+        }
+      });
+      $('importContainer').addEventListener('click', e => {
+        if (e.target.classList.contains('remove-item-btn')) {
+          removeItem(parseInt(e.target.dataset.index, 10));
+        }
+      });
+      $('fileStatus').addEventListener('click', e => {
+        if (e.target.id === 'importSheetBtn') {
+          importSelectedSheet();
+        } else if (e.target.id === 'showMapperBtn') {
+          showColumnMapper();
+        } else if (e.target.id === 'importMappingBtn') {
+          importWithMapping();
+        }
+      });
+      document.body.addEventListener('click', e => {
+        const collapseBtn = e.target.closest('.collapse-toggle');
+        if (collapseBtn) {
+          toggleStoreCollapse(collapseBtn.dataset.storeCode);
+        }
+        const copyBtn = e.target.closest('.copy-btn');
+        if (copyBtn) {
+          copyStoreItems(copyBtn.dataset.storeCode, e);
+        }
+        if (e.target.id === 'distributeBtn') {
+          distributeAndResort();
+        }
+      });
     });
   </script>
 </body>

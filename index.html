@@ -21,6 +21,9 @@
     .container{max-width:1400px;margin:0 auto;background:var(--light);border-radius:15px;box-shadow:0 20px 40px rgba(0,0,0,.1);overflow:hidden;}
     .header{background:var(--gradient-dark);color:var(--light);padding:25px 40px;text-align:center;position:relative;}
     .header h1{font-size:2.2em;margin-bottom:8px;font-weight:300;}
+    .help-button{position:absolute;top:20px;left:20px;}
+    .help-button button{padding:8px 12px;font-size:12px;background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.3);color:#fff;border-radius:6px;cursor:pointer;transition:all .3s ease;}
+    .help-button button:hover{background:rgba(255,255,255,0.3);border-color:rgba(255,255,255,0.5);}
     .dark-mode-toggle{position:absolute;top:20px;right:20px;display:flex;align-items:center;gap:12px;color:#fff;font-size:14px;font-weight:500;z-index:10;}
     .toggle-switch{width:50px;height:24px;background:rgba(255,255,255,.2);border-radius:12px;position:relative;cursor:pointer;transition:all .3s ease;border:2px solid rgba(255,255,255,.3);}
     .toggle-switch:hover{background:rgba(255,255,255,.3);border-color:rgba(255,255,255,.5);}
@@ -97,6 +100,12 @@
     .legend-note{font-size:12px;color:#2e7d32;margin:8px 0 -4px 0;}
     #fullResultsSection{background:var(--muted);padding:25px;margin-top:0;}
     .results-shell{max-width:1400px;margin:0 auto;background:var(--light);border-radius:15px;box-shadow:0 20px 40px rgba(0,0,0,.1);padding:30px;}
+    #helpOverlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);z-index:10000;align-items:center;justify-content:center;}
+    .help-content{background:var(--light);border-radius:12px;padding:30px;max-width:600px;max-height:80vh;overflow-y:auto;margin:20px;position:relative;color:var(--ink-1);}
+    .help-close{position:absolute;top:15px;right:15px;background:none;border:none;font-size:24px;cursor:pointer;color:#666;}
+    .toast{position:fixed;right:16px;bottom:16px;background:#111827;color:#fff;padding:10px 14px;border-radius:8px;font-size:13px;box-shadow:0 8px 20px rgba(0,0,0,.25);opacity:0;pointer-events:none;transform:translateY(10px);transition:opacity .2s ease,transform .2s ease;z-index:9999;}
+    .toast.show{opacity:1;transform:translateY(0);}
+    .toast-light{background:#f8fafc;color:#111;border:1px solid #e5e7eb;}
     body.dark-mode{background:linear-gradient(135deg,var(--ink-2) 0%,#000000 100%);color:#fce4ec;}
     body.dark-mode .container{background:#0a0a0a;color:#fce4ec;}
     body.dark-mode .card{background:#1a1a1a;border-color:#333;color:#fce4ec;}
@@ -132,9 +141,8 @@
     body.dark-mode .copy-btn{background:#000;color:#ffb6c1;border:1px solid #333;}
     body.dark-mode .copied-badge{background:#1a3d1a;border-color:#2e5e2e;color:#90ee90;}
     body.dark-mode .collapse-toggle{background:#000;border-color:#333;color:#fce4ec;}
-    .toast{position:fixed;right:16px;bottom:16px;background:#111827;color:#fff;padding:10px 14px;border-radius:8px;font-size:13px;box-shadow:0 8px 20px rgba(0,0,0,.25);opacity:0;pointer-events:none;transform:translateY(10px);transition:opacity .2s ease,transform .2s ease;z-index:9999;}
-    .toast.show{opacity:1;transform:translateY(0);}
-    .toast-light{background:#f8fafc;color:#111;border:1px solid #e5e7eb;}
+    body.dark-mode .help-content{background:#1a1a1a;color:#fce4ec;}
+    body.dark-mode .help-close{color:#ffb6c1;}
     @media (max-width:1200px){
       .dashboard{grid-template-columns:1fr;padding:20px;}
       .stats-row{grid-template-columns:repeat(2,1fr);}
@@ -144,6 +152,9 @@
 <body class="dark-mode">
   <div class="container">
     <div class="header">
+      <div class="help-button">
+        <button onclick="showHelpOverlay()" title="Show help guide">❓ Help</button>
+      </div>
       <h1>Allocation Buddy</h1>
       <p>Compact dashboard for sorting inventory by store destination</p>
       <div class="dark-mode-toggle">
@@ -213,7 +224,7 @@
               <p style="margin:10px 0;font-size:14px;color:#666;">Choose .xlsx, .xlsm, or .xls files</p>
               <p style="margin:5px 0;font-size:12px;color:#888;">✨ Supports store codes OR store names</p>
               <input type="file" id="fileInput" accept=".xlsx,.xlsm,.xls" onchange="handleFileUpload(event)" style="display:none;"/>
-              <button class="big-button" onclick="$('#fileInput').click()">Choose File</button>
+              <button class="big-button" onclick="document.getElementById('fileInput').click()">Choose File</button>
               <div id="fileStatus" style="font-size:12px;margin-top:10px;"></div>
             </div>
           </div>
@@ -266,7 +277,50 @@
     </div>
   </div>
 
+  <!-- Help Overlay -->
+  <div id="helpOverlay" style="display:none;">
+    <div class="help-content">
+      <button onclick="hideHelpOverlay()" class="help-close">×</button>
+      
+      <h2 style="color:var(--pink-1);margin-bottom:20px;">📚 Allocation Buddy Help</h2>
+      
+      <div style="line-height:1.6;">
+        <h3 style="color:var(--pink-1);margin:20px 0 10px 0;">🪪 Store Management</h3>
+        <p>Manage your store list with codes, names, and priority ranks (AA=Premium, A=High, B=Standard, C=Regular). Toggle stores active/inactive and add new stores as needed.</p>
+        
+        <h3 style="color:var(--pink-1);margin:20px 0 10px 0;">📤 Import Data</h3>
+        <p><strong>Excel Upload:</strong> Upload .xlsx/.xls files with Item, Quantity, and Store columns. Auto-detects headers and supports both store codes and store names.</p>
+        <p><strong>Paste Data:</strong> Copy from Excel and paste. Format: ItemNumber, Quantity, StoreCode/StoreName (comma or tab separated).</p>
+        
+        <h3 style="color:var(--pink-1);margin:20px 0 10px 0;">🚀 Sort & Distribute</h3>
+        <p><strong>Sort by Store:</strong> Organizes items by destination and identifies issues (inactive stores, missing stores).</p>
+        <p><strong>Distribute Problematic → Active:</strong> Automatically redistributes items from inactive or missing stores to active ones using rank-weighted distribution (higher ranks get more items).</p>
+        
+        <h3 style="color:var(--pink-1);margin:20px 0 10px 0;">📋 Copy & Export</h3>
+        <p><strong>Copy Store Items:</strong> Click 📋 Copy to copy item lists (Tab-separated). Hold Alt for CSV format.</p>
+        <p><strong>Export:</strong> Download complete results as Excel file with separate sheets for stores and issues.</p>
+        
+        <h3 style="color:var(--pink-1);margin:20px 0 10px 0;">🌙 Features</h3>
+        <p>• Dark/Light mode toggle<br>• Collapsible store sections<br>• Real-time validation<br>• Rank-weighted redistribution<br>• Automatic store detection by code or name</p>
+        
+        <div class="pro-tip">
+          <strong>💡 Pro Tip:</strong> Items assigned to inactive stores will be flagged. Use "Distribute Inactive → Active" to automatically reallocate them based on store priority ranks.
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div id="copyToast" class="toast">Copied!</div>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div>
+      <strong>Allocation Buddy</strong> - Inventory Management System
+    </div>
+    <div style="margin-top:8px;font-size:12px;opacity:0.8;">
+      Copyright © 2025. All rights reserved. | Designed for efficient inventory allocation and distribution management.
+    </div>
+  </footer>
 
   <script>
     // Cache DOM elements
@@ -354,13 +408,6 @@
              allStores.find(s => s.name.toUpperCase().includes(searchStr.toUpperCase()));
     };
 
-    const escapeHtml = str => String(str)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
-
     const showStatus = (html, type = 'info') => {
       const alertClass = `alert-${type}`;
       const block = `<div class="simple-alert ${alertClass}">${html}</div>`;
@@ -372,10 +419,18 @@
       const preferences = {
         darkMode: document.body.classList.contains('dark-mode'),
         storeStates: allStores.map(s => ({code: s.code, active: s.active})),
-        lastImportTab: $$('.main-area .import-tab.active')?.textContent?.includes('Upload') ? 'upload' : 'paste',
-        lastStoreTab: $$('.sidebar .import-tab.active')?.textContent?.includes('Manage') ? 'manage' : 'add'
+        lastImportTab: getActiveImportTab(),
+        lastStoreTab: $('.sidebar .import-tab.active')?.textContent?.includes('Manage') ? 'manage' : 'add'
       };
       setCookie(COOKIE_NAME, preferences);
+    };
+
+    const getActiveImportTab = () => {
+      const activeTab = $('.main-area .import-tab.active')?.textContent;
+      if (activeTab?.includes('Upload')) return 'upload';
+      if (activeTab?.includes('Paste')) return 'paste';
+      if (activeTab?.includes('How to Use')) return 'info';
+      return 'upload';
     };
 
     const loadUserPreferences = () => {
@@ -407,6 +462,17 @@
       }, 50);
     };
 
+    // Help functions
+    const showHelpOverlay = () => {
+      $('helpOverlay').style.display = 'flex';
+      document.body.style.overflow = 'hidden';
+    };
+
+    const hideHelpOverlay = () => {
+      $('helpOverlay').style.display = 'none';
+      document.body.style.overflow = 'auto';
+    };
+
     // Tab management
     const switchTab = (section, tabName, save = true) => {
       const isStore = section === 'store';
@@ -434,46 +500,18 @@
 
     const updateStoreStatus = () => {
       updateStoreCounts();
-      const container = $('storeStatusContainer');
-      container.innerHTML = '';
-      sortStoresNumerically(allStores).forEach(store => {
-        const item = document.createElement('div');
-        item.className = 'store-item';
-
-        const checkbox = document.createElement('input');
-        checkbox.type = 'checkbox';
-        checkbox.checked = store.active;
-        checkbox.onchange = e => toggleStoreStatus(store.code, e.target.checked);
-        item.appendChild(checkbox);
-
-        const info = document.createElement('div');
-        info.className = 'info';
-
-        const codeSpan = document.createElement('span');
-        codeSpan.className = 'code';
-        codeSpan.textContent = store.code;
-        info.appendChild(codeSpan);
-
-        const nameSpan = document.createElement('span');
-        nameSpan.className = 'name';
-        nameSpan.textContent = store.name;
-        info.appendChild(nameSpan);
-
-        const rankSpan = document.createElement('span');
-        rankSpan.className = `rank-badge rank-${store.rank.toLowerCase()}`;
-        rankSpan.textContent = store.rank;
-        info.appendChild(rankSpan);
-
-        item.appendChild(info);
-
-        const removeBtn = document.createElement('button');
-        removeBtn.className = 'remove-btn';
-        removeBtn.onclick = () => removeStore(store.code);
-        removeBtn.textContent = '×';
-        item.appendChild(removeBtn);
-
-        container.appendChild(item);
-      });
+      $('storeStatusContainer').innerHTML = sortStoresNumerically(allStores)
+        .map(store => `
+          <div class="store-item">
+            <input type="checkbox" ${store.active ? 'checked' : ''} onchange="toggleStoreStatus('${store.code}', this.checked)"/>
+            <div class="info">
+              <span class="code">${store.code}</span>
+              <span class="name">${store.name}</span>
+              <span class="rank-badge rank-${store.rank.toLowerCase()}">${store.rank}</span>
+            </div>
+            <button class="remove-btn" onclick="removeStore('${store.code}')">×</button>
+          </div>`)
+        .join('');
       updateDistributeButtonState();
     };
 
@@ -538,16 +576,14 @@
             showSheetSelector();
           }
         } catch (err) {
-          $('fileStatus').innerHTML = `❌ Error reading file: ${escapeHtml(err.message)}`;
+          $('fileStatus').innerHTML = `❌ Error reading file: ${err.message}`;
         }
       };
       reader.readAsArrayBuffer(file);
     };
 
     const showSheetSelector = () => {
-      const options = currentWorkbook.SheetNames
-        .map(name => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`)
-        .join('');
+      const options = currentWorkbook.SheetNames.map(name => `<option value="${name}">${name}</option>`).join('');
       $('fileStatus').innerHTML = `
         <div style="margin: 10px 0;">
           <label style="display: block; margin-bottom: 5px; font-weight: 500;">Select Sheet to Import:</label>
@@ -563,6 +599,8 @@
 
     const importFromSheet = (sheetName, columnMapping = null) => {
       try {
+        let debugOutput = ''; // Prevent any undefined variable errors
+        
         const rows = XLSX.utils.sheet_to_json(currentWorkbook.Sheets[sheetName], {header:1, defval:'', raw: false});
         if (rows.length === 0) {
           $('fileStatus').innerHTML = '⚠️ Sheet is empty';
@@ -572,20 +610,64 @@
         let headerRow = -1, itemCol = 0, qtyCol = 1, storeCol = 2;
         
         if (!columnMapping) {
-          // Auto-detect headers
+          // Auto-detect headers with your specific patterns
           for (let i = 0; i < Math.min(5, rows.length); i++) {
             const row = rows[i];
-            const patterns = [/(item|part|product|nsn|sku)/, /(qty|quantity|amount|count)/, /(store|location|dest|code)/];
-            if (patterns.some(pattern => row.some(cell => String(cell).toLowerCase().match(pattern)))) {
+            const itemPatterns = /(item|style|item\s*no|item\s*number)/i;
+            const qtyPatterns = /(qty|quantity|allocations)/i;
+            
+            let foundItem = false, foundQty = false, foundStore = false;
+            
+            row.forEach((cell, idx) => {
+              const cellStr = String(cell).toLowerCase().trim();
+              
+              // Check for item patterns
+              if (itemPatterns.test(cellStr) && !foundItem) {
+                itemCol = idx;
+                foundItem = true;
+              }
+              
+              // Check for quantity patterns  
+              if (qtyPatterns.test(cellStr) && !foundQty) {
+                qtyCol = idx;
+                foundQty = true;
+              }
+              
+              // Check for store column - look for 3-digit numbers or store-like headers
+              if (!foundStore) {
+                // Check if this cell contains a 3-digit number (likely store codes)
+                if (/^\d{3}$/.test(cellStr)) {
+                  storeCol = idx;
+                  foundStore = true;
+                }
+                // Also check traditional store headers as backup
+                else if (/(store|location|dest|code)/i.test(cellStr)) {
+                  storeCol = idx;
+                  foundStore = true;
+                }
+              }
+            });
+            
+            // If we found item and qty patterns, this is likely the header row
+            if (foundItem || foundQty) {
               headerRow = i;
-              row.forEach((cell, idx) => {
-                const cellStr = String(cell).toLowerCase();
-                if (patterns[0].test(cellStr) && itemCol === 0) itemCol = idx;
-                if (patterns[1].test(cellStr) && qtyCol === 1) qtyCol = idx;
-                if (patterns[2].test(cellStr) && storeCol === 2) storeCol = idx;
-              });
               break;
             }
+            
+            // If we found 3-digit numbers but no clear headers, assume no header row
+            if (foundStore && !foundItem && !foundQty && i === 0) {
+              headerRow = -1; // No header row, start from row 0
+              break;
+            }
+          }
+          
+          // If no header detected, check first data row for 3-digit store codes
+          if (headerRow === -1 && rows.length > 0) {
+            rows[0].forEach((cell, idx) => {
+              if (/^\d{3}$/.test(String(cell).trim())) {
+                storeCol = idx;
+              }
+            });
           }
         } else {
           ({itemCol, qtyCol, storeCol, headerRow} = columnMapping);
@@ -615,7 +697,7 @@
           const store = findStoreByCodeOrName(storeIdentifier);
           if (!store) {
             skipped++;
-            errors.push(`Row ${idx + 1}: Store "${escapeHtml(storeIdentifier)}" not found`);
+            errors.push(`Row ${idx + 1}: Store "${storeIdentifier}" not found`);
             return;
           }
           
@@ -628,7 +710,7 @@
           imported++;
         });
 
-        let statusMsg = `✅ Imported ${imported} items from "${escapeHtml(sheetName)}"`;
+        let statusMsg = `✅ Imported ${imported} items from "${sheetName}"`;
         if (skipped > 0) {
           statusMsg += ` (${skipped} rows skipped)`;
           if (errors.length <= 5) {
@@ -638,59 +720,46 @@
           }
         }
         
+        statusMsg += debugOutput; // Add the debug information
+        
         $('fileStatus').innerHTML = statusMsg;
-      updateImportDisplay();
-    } catch (err) {
-        $('fileStatus').innerHTML = `❌ Import error: ${escapeHtml(err.message)}`;
-    }
-  };
+        updateImportDisplay();
+      } catch (err) {
+        $('fileStatus').innerHTML = `❌ Import error: ${err.message}`;
+      }
+    };
 
     const showColumnMapper = () => {
       const sheetName = $('sheetSelector').value;
       const rows = XLSX.utils.sheet_to_json(currentWorkbook.Sheets[sheetName], {header:1, defval:'', raw: false});
       if (rows.length === 0) return;
-
+      
       const previewRows = rows.slice(0, 5);
-      const previewHtml = previewRows.map((row, idx) => {
-        const cells = row.slice(0, 10).map((cell, colIdx) => {
-          const cellRaw = String(cell);
-          const cellTitle = escapeHtml(cellRaw);
-          const cellDisplay = escapeHtml(cellRaw.substring(0, 15));
-          return `<td style="padding: 2px 4px;" title="Column ${String.fromCharCode(65 + colIdx)}: ${cellTitle}">${cellDisplay}</td>`;
-        }).join('');
-        return `
-                <tr style="border-bottom: 1px solid #ddd;">
-                  <td style="padding: 2px 4px; font-weight: bold; background: #eee;">${idx + 1}</td>
-                  ${cells}
-                </tr>`;
-      }).join('');
-
-      const selectHtml = ['Item', 'Quantity', 'Store'].map((label, i) => {
-        const opts = rows[0].map((_, idx) => {
-          const headerRaw = String(rows[0][idx]);
-          const headerDisplay = escapeHtml(headerRaw.substring(0, 10));
-          return `<option value="${idx}" ${idx === i ? 'selected' : ''}>Column ${String.fromCharCode(65 + idx)} (${headerDisplay})</option>`;
-        }).join('');
-        return `
-              <div>
-                <label style="font-size: 12px; font-weight: 500;">${label} Column:</label>
-                <select id="${['item', 'qty', 'store'][i]}ColSelect" style="width: 100%; padding: 4px;">
-                  ${opts}
-                </select>
-                ${i === 2 ? '<div style="font-size: 10px; color: #666; margin-top: 2px;">Accepts store codes or names</div>' : ''}
-              </div>`;
-      }).join('');
-
       $('fileStatus').innerHTML = `
         <div style="margin: 10px 0;">
-          <h4>Column Mapping for "${escapeHtml(sheetName)}"</h4>
+          <h4>Column Mapping for "${sheetName}"</h4>
           <div style="background: #f5f5f5; padding: 8px; border-radius: 4px; margin: 8px 0; max-height: 150px; overflow: auto;">
             <table style="width: 100%; font-size: 11px; border-collapse: collapse;">
-              ${previewHtml}
+              ${previewRows.map((row, idx) => `
+                <tr style="border-bottom: 1px solid #ddd;">
+                  <td style="padding: 2px 4px; font-weight: bold; background: #eee;">${idx + 1}</td>
+                  ${row.slice(0, 10).map((cell, colIdx) => `
+                    <td style="padding: 2px 4px;" title="Column ${String.fromCharCode(65 + colIdx)}: ${String(cell)}">${String(cell).substring(0, 15)}</td>
+                  `).join('')}
+                </tr>
+              `).join('')}
             </table>
           </div>
           <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 8px 0;">
-            ${selectHtml}
+            ${['Item', 'Quantity', 'Store'].map((label, i) => `
+              <div>
+                <label style="font-size: 12px; font-weight: 500;">${label} Column:</label>
+                <select id="${['item', 'qty', 'store'][i]}ColSelect" style="width: 100%; padding: 4px;">
+                  ${rows[0].map((_, idx) => `<option value="${idx}" ${idx === i ? 'selected' : ''}>Column ${String.fromCharCode(65 + idx)} (${String(rows[0][idx]).substring(0, 10)})</option>`).join('')}
+                </select>
+                ${i === 2 ? '<div style="font-size: 10px; color: #666; margin-top: 2px;">Accepts store codes or names</div>' : ''}
+              </div>
+            `).join('')}
           </div>
           <div style="margin: 8px 0;">
             <label style="font-size: 12px; font-weight: 500;">Header Row (skip this many rows):</label>
@@ -737,8 +806,9 @@
         
         const store = findStoreByCodeOrName(storeIdentifier);
         if (!store) {
-          skipped++;
-          errors.push(`Line ${idx + 1}: Store "${storeIdentifier}" not found`);
+          // Import with invalid store code - will be flagged during sorting
+          itemsToSort.push({itemNumber, quantity, storeCode: storeIdentifier, source:'Paste'});
+          imported++;
           return;
         }
         
@@ -771,43 +841,21 @@
         updateDistributeButtonState();
         return;
       }
-
+      
       clearBtn.classList.remove('hidden');
-      const container = $('importContainer');
-      container.innerHTML = '';
-      itemsToSort.forEach((item, index) => {
+      $('importContainer').innerHTML = itemsToSort.map((item, index) => {
         const store = allStores.find(s => s.code === item.storeCode);
         const status = !store ? 'NOT FOUND' : (store.active ? 'ACTIVE' : 'INACTIVE');
         const statusColor = !store ? '#e74c3c' : (store.active ? '#27ae60' : '#f39c12');
-
-        const qItem = document.createElement('div');
-        qItem.className = 'queue-item';
-
-        const info = document.createElement('div');
-        const strong = document.createElement('strong');
-        strong.textContent = item.itemNumber;
-        info.appendChild(strong);
-        info.appendChild(document.createTextNode(` → ${item.storeCode}`));
-
-        const details = document.createElement('div');
-        details.className = 'details';
-        details.textContent = `Qty: ${item.quantity} | `;
-        const statusSpan = document.createElement('span');
-        statusSpan.style.color = statusColor;
-        statusSpan.textContent = status;
-        details.appendChild(statusSpan);
-        info.appendChild(details);
-
-        qItem.appendChild(info);
-
-        const btn = document.createElement('button');
-        btn.className = 'remove-btn';
-        btn.onclick = () => removeItem(index);
-        btn.textContent = '×';
-        qItem.appendChild(btn);
-
-        container.appendChild(qItem);
-      });
+        return `
+          <div class="queue-item">
+            <div>
+              <strong>${item.itemNumber}</strong> → ${item.storeCode}
+              <div class="details">Qty: ${item.quantity} | <span style="color:${statusColor};">${status}</span> | Source: ${item.source}</div>
+            </div>
+            <button class="remove-btn" onclick="removeItem(${index})">×</button>
+          </div>`;
+      }).join('');
       updateDistributeButtonState();
     };
 
@@ -1022,13 +1070,6 @@
         $('issuesContainer').classList.remove('hidden');
         const totalIssueQty = issues.reduce((s,i) => s+i.quantity, 0);
         const hasInactive = issues.some(i => i.type === 'inactive');
-        const issueRows = issues.map(issue => `
-                    <tr>
-                      <td><strong>${escapeHtml(issue.itemNumber)}</strong></td>
-                      <td>${issue.quantity}</td>
-                      <td>${escapeHtml(issue.storeCode)}</td>
-                      <td style="color:${issue.type === 'not_found' ? 'var(--danger)' : 'var(--warning)'};">${escapeHtml(issue.message)}</td>
-                    </tr>`).join('');
 
         $('issuesContainer').innerHTML = `
           <div class="simple-alert alert-warning" style="margin-bottom:12px;">
@@ -1043,7 +1084,13 @@
               <table class="store-pane-table">
                 <thead><tr><th>Item</th><th>Qty</th><th>Store Code</th><th>Issue</th></tr></thead>
                 <tbody>
-                  ${issueRows}
+                  ${issues.map(issue => `
+                    <tr>
+                      <td><strong>${issue.itemNumber}</strong></td>
+                      <td>${issue.quantity}</td>
+                      <td>${issue.storeCode}</td>
+                      <td style="color:${issue.type === 'not_found' ? 'var(--danger)' : 'var(--warning)'};">${issue.message}</td>
+                    </tr>`).join('')}
                 </tbody>
               </table>
               <div style="display:flex;justify-content:flex-end;margin-top:12px;">
@@ -1060,60 +1107,54 @@
         $('issuesContainer').innerHTML = '';
       }
 
-      const storeBlocks = sortedStores.map(store => {
-        const itemsSorted = store.items.slice().sort((a,b) => a.itemNumber.localeCompare(b.itemNumber));
-        const storeDelta = itemsSorted.reduce((sum,it) => sum + (redistributionDeltas[`${it.itemNumber}|${store.storeCode}`] || 0), 0);
-        const isCollapsed = collapsedStores[store.storeCode];
-        const isCopied = copiedStores[store.storeCode];
-        const storeCodeEsc = escapeHtml(store.storeCode);
-        const storeNameEsc = escapeHtml(store.storeName);
-        const rowsHtml = itemsSorted.map(it => {
-          const d = redistributionDeltas[`${it.itemNumber}|${store.storeCode}`] || 0;
-          const rowClass = d > 0 ? 'redistributed-row' : '';
-          const itemEsc = escapeHtml(it.itemNumber);
-          return `
-                        <tr class="${rowClass}">
-                          <td><strong>${itemEsc}</strong></td>
-                          <td>${it.quantity}${d>0 ? ` <span class="delta-badge">+${d}</span>` : ''}</td>
-                          <td>${storeCodeEsc}</td>
-                        </tr>`;
-        }).join('');
-
-        return `
-              <div class="store-pane ${isCollapsed ? 'collapsed' : ''}">
-                <div class="store-pane-header">
-                  <div class="store-pane-title">
-                    <button class="collapse-toggle" onclick="toggleStoreCollapse('${storeCodeEsc}')" title="${isCollapsed ? 'Expand' : 'Collapse'}">
-                      <span class="chev">▾</span> ${isCollapsed ? 'Expand' : 'Collapse'}
-                    </button>
-                    ${storeCodeEsc} - ${storeNameEsc}
-                    <span class="rank-badge rank-${store.rank.toLowerCase()}" style="margin-left:4px;background:rgba(255,255,255,0.2);">${store.rank}</span>
-                    ${isCopied ? '<span class="copied-badge" title="Copied to clipboard">Copied</span>' : ''}
-                  </div>
-                  <div class="store-pane-stats">
-                    ${store.totalQuantity} units total
-                    ${storeDelta > 0 ? `<span class="delta-badge">+${storeDelta} redistributed</span>` : ''}
-                    <button class="copy-btn" title="Copy Item & Qty (Tab). Hold Alt for CSV" onclick="copyStoreItems('${storeCodeEsc}', event)">📋 Copy</button>
-                  </div>
-                </div>
-                <div class="store-pane-body">
-                  <table class="store-pane-table">
-                    <thead><tr><th>Item</th><th>Qty</th><th>Code</th></tr></thead>
-                    <tbody>
-                      ${rowsHtml}
-                    </tbody>
-                  </table>
-                </div>
-              </div>`;
-      }).join('');
-
       $('resultsContainer').innerHTML = `
         <div class="simple-alert alert-info">
           <strong>📦 Items Sorted by Store</strong> - ${validItems.length} items sorted to ${sortedStores.length} active stores
           ${hasAnyDeltas ? `<div class="legend-note">Green tags/rows indicate units added by the <em>last redistribution</em>.</div>` : ''}
         </div>
         <div class="store-panes">
-          ${storeBlocks}
+          ${sortedStores.map(store => {
+            const itemsSorted = store.items.slice().sort((a,b) => a.itemNumber.localeCompare(b.itemNumber));
+            const storeDelta = itemsSorted.reduce((sum,it) => sum + (redistributionDeltas[`${it.itemNumber}|${store.storeCode}`] || 0), 0);
+            const isCollapsed = collapsedStores[store.storeCode];
+            const isCopied = copiedStores[store.storeCode];
+
+            return `
+              <div class="store-pane ${isCollapsed ? 'collapsed' : ''}">
+                <div class="store-pane-header">
+                  <div class="store-pane-title">
+                    <button class="collapse-toggle" onclick="toggleStoreCollapse('${store.storeCode}')" title="${isCollapsed ? 'Expand' : 'Collapse'}">
+                      <span class="chev">▾</span> ${isCollapsed ? 'Expand' : 'Collapse'}
+                    </button>
+                    ${store.storeCode} - ${store.storeName}
+                    <span class="rank-badge rank-${store.rank.toLowerCase()}" style="margin-left:4px;background:rgba(255,255,255,0.2);">${store.rank}</span>
+                    ${isCopied ? '<span class="copied-badge" title="Copied to clipboard">Copied</span>' : ''}
+                  </div>
+                  <div class="store-pane-stats">
+                    ${store.totalQuantity} units total
+                    ${storeDelta > 0 ? `<span class="delta-badge">+${storeDelta} redistributed</span>` : ''}
+                    <button class="copy-btn" title="Copy Item & Qty (Tab). Hold Alt for CSV" onclick="copyStoreItems('${store.storeCode}', event)">📋 Copy</button>
+                  </div>
+                </div>
+                <div class="store-pane-body">
+                  <table class="store-pane-table">
+                    <thead><tr><th>Item</th><th>Qty</th><th>Code</th></tr></thead>
+                    <tbody>
+                      ${itemsSorted.map(it => {
+                        const d = redistributionDeltas[`${it.itemNumber}|${store.storeCode}`] || 0;
+                        const rowClass = d > 0 ? 'redistributed-row' : '';
+                        return `
+                        <tr class="${rowClass}">
+                          <td><strong>${it.itemNumber}</strong></td>
+                          <td>${it.quantity}${d>0 ? ` <span class="delta-badge">+${d}</span>` : ''}</td>
+                          <td>${store.storeCode}</td>
+                        </tr>`;
+                      }).join('')}
+                    </tbody>
+                  </table>
+                </div>
+              </div>`;
+          }).join('')}
         </div>`;
       updateDistributeButtonState();
     };
@@ -1190,20 +1231,88 @@
 
     const startOver = () => {
       if (confirm('Start over? This will clear everything.')) {
-        itemsToSort = [];
-        lastResults = null;
-        redistributionDeltas = {};
-        Object.keys(collapsedStores).forEach(k => delete collapsedStores[k]);
-        Object.keys(copiedStores).forEach(k => delete copiedStores[k]);
-        $('fileInput').value = '';
-        $('pasteArea').value = '';
-        $('fileStatus').innerHTML = '';
-        showStatus('', 'info');
-        $('fullResultsSection').classList.add('hidden');
-        $('resultsContainer').innerHTML = '';
-        $('issuesContainer').innerHTML = '';
-        $('totalProcessed').textContent = '0';
-        updateImportDisplay();
+        try {
+          console.log('Starting reset...');
+          
+          // Clear data arrays
+          itemsToSort.length = 0; // Clear array in place
+          lastResults = null;
+          redistributionDeltas = {};
+          currentWorkbook = null;
+          
+          // Clear state objects completely
+          for (let key in collapsedStores) delete collapsedStores[key];
+          for (let key in copiedStores) delete copiedStores[key];
+          
+          console.log('Data cleared...');
+          
+          // Reset ALL form inputs
+          const fileInput = $('fileInput');
+          const pasteArea = $('pasteArea');
+          const fileStatus = $('fileStatus');
+          const newStoreCode = $('newStoreCode');
+          const newStoreName = $('newStoreName');
+          const newStoreRank = $('newStoreRank');
+          const newStoreActive = $('newStoreActive');
+          
+          if (fileInput) {
+            fileInput.value = '';
+            fileInput.files = null;
+          }
+          if (pasteArea) pasteArea.value = '';
+          if (fileStatus) fileStatus.innerHTML = '';
+          if (newStoreCode) newStoreCode.value = '';
+          if (newStoreName) newStoreName.value = '';
+          if (newStoreRank) newStoreRank.value = 'B';
+          if (newStoreActive) newStoreActive.checked = true;
+          
+          console.log('Forms cleared...');
+          
+          // Clear ALL status messages and containers
+          const sortingStatus = $('sortingStatus');
+          const resultsStatus = $('resultsStatus');
+          if (sortingStatus) sortingStatus.innerHTML = '';
+          if (resultsStatus) resultsStatus.innerHTML = '';
+          
+          // Hide and clear results sections
+          const fullResultsSection = $('fullResultsSection');
+          const resultsContainer = $('resultsContainer');
+          const issuesContainer = $('issuesContainer');
+          
+          if (fullResultsSection) fullResultsSection.classList.add('hidden');
+          if (resultsContainer) resultsContainer.innerHTML = '';
+          if (issuesContainer) {
+            issuesContainer.innerHTML = '';
+            issuesContainer.classList.add('hidden');
+          }
+          
+          // Reset all counters
+          const counters = ['itemCount', 'storeDestinationCount', 'totalProcessed'];
+          counters.forEach(id => {
+            const el = $(id);
+            if (el) el.textContent = '0';
+          });
+          
+          console.log('UI cleared...');
+          
+          // Force update displays
+          updateImportDisplay();
+          updateDistributeButtonState();
+          updateStoreCounts();
+          
+          console.log('Displays updated...');
+          
+          // Show success message
+          setTimeout(() => {
+            showStatus('<strong>✅ Reset complete.</strong> Ready for new data.', 'success');
+          }, 100);
+          
+          console.log('Reset completed successfully');
+          
+        } catch (error) {
+          console.error('Error during reset:', error);
+          alert(`Reset encountered an error: ${error.message}. Please refresh the page.`);
+        }
       }
     };
 
@@ -1243,6 +1352,13 @@
       btn.title = !needed ? 'No inactive-store items to distribute' : 
                   (!hasEligibleTargets ? 'No eligible target stores in current results' : 'Redistribute items from inactive stores');
     };
+
+    // Close help overlay with Escape key
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && $('helpOverlay').style.display === 'flex') {
+        hideHelpOverlay();
+      }
+    });
 
     // Initialize
     document.addEventListener('DOMContentLoaded', () => {

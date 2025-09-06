@@ -18,9 +18,9 @@
     }
     *{margin:0;padding:0;box-sizing:border-box;}
     body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background:var(--gradient-primary);min-height:100vh;padding:15px;color:#111;}
-    .container{max-width:1400px;margin:0 auto;background:var(--light);border-radius:15px;box-shadow:0 20px 40px rgba(0,0,0,.1);overflow:hidden;}
+    .container{max-width:min(1600px,96vw);margin:0 auto;background:var(--light);border-radius:15px;box-shadow:0 20px 40px rgba(0,0,0,.1);overflow:hidden;}
     .header{background:var(--gradient-dark);color:var(--light);padding:25px 40px;text-align:center;position:relative;}
-    .header h1{font-size:2.2em;margin-bottom:8px;font-weight:300;}
+    .header h1{font-size:clamp(1.4rem,1.2vw+1rem,2.2rem);margin-bottom:8px;font-weight:300;}
     .help-button{position:absolute;top:20px;left:20px;}
     .help-button button{padding:8px 12px;font-size:12px;background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.3);color:#fff;border-radius:6px;cursor:pointer;transition:all .3s ease;}
     .help-button button:hover{background:rgba(255,255,255,0.3);border-color:rgba(255,255,255,0.5);}
@@ -31,13 +31,18 @@
     .toggle-switch.active{background:var(--pink-1);border-color:var(--pink-1);}
     .toggle-switch.active::after{transform:translateX(26px);}
     .toggle-icon{font-size:16px;transition:all .3s ease;}
-    .dashboard{padding:25px;display:grid;grid-template-columns:350px 1fr;gap:25px;}
+    .dashboard{padding:clamp(16px,1.8vw,28px);display:grid;grid-template-columns:clamp(260px,24vw,420px) 1fr;gap:clamp(14px,1.4vw,28px);align-items:stretch;}    
     .sidebar,.main-area{display:flex;flex-direction:column;gap:20px;}
+    /* Make the Store Management card fill the column height */
+    .sidebar .card{flex:0 0 auto;display:flex;flex-direction:column;overflow:hidden;}
+    .sidebar .card .import-content{flex:1 1 auto;display:none;flex-direction:column;min-height:0;}
+    .sidebar .card .import-content.active{display:flex;}
+    .sidebar .store-list{flex:1 1 auto;max-height:none;min-height:0;overflow:auto;}
     .card{background:#fff;border:1px solid #ddd;border-radius:12px;padding:20px;box-shadow:0 2px 8px rgba(0,0,0,0.05);}
     .card h3{color:var(--ink-1);margin-bottom:15px;font-size:1.1em;display:flex;align-items:center;gap:8px;}
-    .stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:15px;}
-    .stat-card{background:var(--gradient-primary);color:#fff;padding:20px;border-radius:10px;text-align:center;}
-    .stat-value{font-size:2.2em;font-weight:bold;display:block;}
+    .stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:clamp(10px,1.2vw,18px);}    
+    .stat-card{background:var(--gradient-primary);color:#fff;padding:clamp(12px,1.6vw,22px);border-radius:10px;text-align:center;}
+    .stat-value{font-size:clamp(1.4rem,2.2vw,2.4rem);font-weight:bold;display:block;}
     .stat-label{font-size:0.9em;opacity:0.9;margin-top:5px;}
     .import-tabs{display:flex;background:#f8f9fa;border-radius:8px;padding:3px;margin-bottom:15px;}
     .import-tab{flex:1;padding:8px 15px;background:transparent;border:none;border-radius:5px;cursor:pointer;font-weight:500;transition:all 0.3s ease;text-align:center;font-size:14px;}
@@ -47,7 +52,8 @@
     .import-content.active{display:block;}
     .upload-area{border:2px dashed #ddd;border-radius:8px;padding:20px;text-align:center;background:#fef5f8;}
     .upload-area:hover{border-color:var(--pink-1);background:#ffe0ec;}
-    .store-list{max-height:300px;overflow-y:auto;border:1px solid #eee;border-radius:6px;padding:10px;}
+    .upload-area.dragover{border-color:var(--pink-1);background:#ffe0ec;}
+    .store-list{max-height:min(38vh,420px);overflow-y:auto;border:1px solid #eee;border-radius:6px;padding:10px;}
     .store-item{display:flex;align-items:center;padding:8px;margin:2px 0;background:#f8f9fa;border-radius:4px;font-size:14px;}
     .store-item input{margin-right:10px;}
     .store-item .info{flex:1;display:flex;align-items:center;gap:10px;}
@@ -83,10 +89,18 @@
     .store-pane-title{font-weight:bold;font-size:18px;display:flex;align-items:center;gap:10px;}
     .store-pane-stats{font-size:14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
     .copy-btn{background:#ffffff;color:#1a1a1a;border:none;border-radius:6px;padding:6px 10px;cursor:pointer;font-size:12px;font-weight:600;}
-    .copy-btn:hover{filter:brightness(0.95);}
+    .copy-btn:hover{filter:brightness(0.95);} 
+    /* Responsive 2-col layout used near actions section */
+    .two-col{display:grid;grid-template-columns:2fr 1fr;gap:clamp(12px,1.4vw,24px);}    
+    @media (max-width:1100px){.two-col{grid-template-columns:1fr;}}
     .copied-badge{background:#ecfdf5;color:#065f46;border:1px solid #a7f3d0;padding:3px 8px;border-radius:9999px;font-size:12px;font-weight:700;}
-    .store-pane-body{padding:10px 12px 16px;}
+    .store-pane-body{padding:10px 12px 16px;overflow:auto;max-height:calc(80vh - 220px);}    
+    .store-pane-actions{padding:10px 12px 12px;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;border-top:1px solid #eee;background:#fff;}
     .store-pane-table{width:100%;border-collapse:collapse;}
+    /* Sticky headers for issues table */
+    .sticky-head thead th{position:sticky;top:0;z-index:2}
+    .store-pane-table thead th{background:#f8f9fa}
+    body.dark-mode .store-pane-table thead th{background:#222}
     .store-pane-table th{background:#f8f9fa;padding:10px;text-align:left;border-bottom:2px solid #dee2e6;font-weight:600;}
     .store-pane-table td{padding:8px 10px;border-bottom:1px solid #eee;}
     .store-pane-table tr:hover{background:#f8f9fa;}
@@ -96,16 +110,43 @@
     .collapsed .chev{transform:rotate(-90deg);}
     .collapsed .store-pane-body{display:none;}
     .store-pane-table tr.redistributed-row{background:#e8f5e8!important;}
+    .store-pane-table tr.manual-row{background:#fff9c4!important;}
     .delta-badge{display:inline-block;margin-left:8px;padding:2px 8px;font-size:11px;border-radius:9999px;font-weight:700;background:#e8f5e8;border:1px solid #c8e6c9;color:#1b5e20;line-height:1.4;vertical-align:middle;}
+    .delta-badge.auto{background:#e8f5e8;border:1px solid #c8e6c9;color:#1b5e20;}
+    .delta-badge.manual{background:#fff9c4;border:1px solid #ffe082;color:#7a5f00;}
     .legend-note{font-size:12px;color:#2e7d32;margin:8px 0 -4px 0;}
-    #fullResultsSection{background:var(--muted);padding:25px;margin-top:0;}
-    .results-shell{max-width:1400px;margin:0 auto;background:var(--light);border-radius:15px;box-shadow:0 20px 40px rgba(0,0,0,.1);padding:30px;}
+    #fullResultsSection{background:var(--muted);padding:clamp(16px,1.8vw,28px);margin-top:0;}
+    .results-shell{max-width:min(1600px,96vw);margin:0 auto;background:var(--light);border-radius:15px;box-shadow:0 20px 40px rgba(0,0,0,.1);padding:clamp(16px,2vw,32px);}    
     #helpOverlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);z-index:10000;align-items:center;justify-content:center;}
     .help-content{background:var(--light);border-radius:12px;padding:30px;max-width:600px;max-height:80vh;overflow-y:auto;margin:20px;position:relative;color:var(--ink-1);}
     .help-close{position:absolute;top:15px;right:15px;background:none;border:none;font-size:24px;cursor:pointer;color:#666;}
     .toast{position:fixed;right:16px;bottom:16px;background:#111827;color:#fff;padding:10px 14px;border-radius:8px;font-size:13px;box-shadow:0 8px 20px rgba(0,0,0,.25);opacity:0;pointer-events:none;transform:translateY(10px);transition:opacity .2s ease,transform .2s ease;z-index:9999;}
     .toast.show{opacity:1;transform:translateY(0);}
     .toast-light{background:#f8fafc;color:#111;border:1px solid #e5e7eb;}
+    /* Accessible focus */
+    :focus-visible{outline:2px solid var(--pink-1);outline-offset:2px}
+    .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,1,1);white-space:nowrap;border:0}
+    /* App animations */
+    @keyframes fadeInUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes fadeOutDown{from{opacity:1;transform:translateY(0)}to{opacity:0;transform:translateY(8px)}}
+    @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+    @keyframes popIn{0%{transform:scale(.9);opacity:0}60%{transform:scale(1.03);opacity:1}100%{transform:scale(1)}}
+    @keyframes flashBg{0%{box-shadow:0 0 0 0 rgba(255,105,180,.0)}30%{box-shadow:0 0 0 3px rgba(255,105,180,.15)}100%{box-shadow:0 0 0 0 rgba(255,105,180,.0)}}
+    .update-flash{animation:flashBg .8s ease}
+    .queue-item{animation:fadeInUp .25s ease both}
+    .queue-item.removing{animation:fadeOutDown .2s ease both}
+    .store-pane{animation:fadeIn .25s ease both}
+    .store-pane-body{animation:fadeInUp .25s ease both}
+    .store-pane-body tbody tr{animation:fadeIn .2s ease both}
+    .delta-badge{animation:popIn .35s ease}
+    /* Floating Go-To-Top button */
+    .back-to-top{position:fixed;right:28px;bottom:80px;width:44px;height:44px;border-radius:9999px;border:none;cursor:pointer;
+      background:var(--gradient-primary);color:#fff;font-weight:700;font-size:18px;display:flex;align-items:center;justify-content:center;
+      box-shadow:0 8px 20px rgba(0,0,0,.25);opacity:0;pointer-events:none;transform:translateY(10px) scale(.96);
+      transition:opacity .2s ease, transform .2s ease, box-shadow .2s ease;z-index:9998}
+    .back-to-top.show{opacity:1;pointer-events:auto;transform:translateY(0) scale(1)}
+    .back-to-top:hover{box-shadow:0 12px 28px rgba(0,0,0,.3);transform:translateY(-2px) scale(1.02)}
+    body.dark-mode .back-to-top{background:linear-gradient(135deg,#d81b60 0%,#c2185b 100%)}
     body.dark-mode{background:linear-gradient(135deg,var(--ink-2) 0%,#000000 100%);color:#fce4ec;}
     body.dark-mode .container{background:#0a0a0a;color:#fce4ec;}
     body.dark-mode .card{background:#1a1a1a;border-color:#333;color:#fce4ec;}
@@ -131,8 +172,12 @@
     body.dark-mode .store-pane-table tr:hover{background:#222;}
     body.dark-mode .store-pane-table tr:nth-child(even){background:#1a1a1a;}
     body.dark-mode .store-pane-table tr.redistributed-row{background:#1a3d1a!important;}
+    body.dark-mode .store-pane-table tr.manual-row{background:#3a3200!important;}
     body.dark-mode .delta-badge{background:#1a3d1a;border-color:#2e5e2e;color:#90ee90;}
+    body.dark-mode .delta-badge.auto{background:#1a3d1a;border-color:#2e5e2e;color:#90ee90;}
+    body.dark-mode .delta-badge.manual{background:#3a3200;border-color:#665200;color:#ffd54f;}
     body.dark-mode .legend-note{color:#90ee90;}
+    body.dark-mode .store-pane-actions{background:#1a1a1a;border-top-color:#333;}
     body.dark-mode .simple-alert{color:#fce4ec;}
     body.dark-mode .alert-info{background:#330a1c;border-color:#d81b60;color:#ffb6c1;}
     body.dark-mode .alert-success{background:#0a2e0a;border-color:#2e5e2e;color:#90ee90;}
@@ -143,9 +188,14 @@
     body.dark-mode .collapse-toggle{background:#000;border-color:#333;color:#fce4ec;}
     body.dark-mode .help-content{background:#1a1a1a;color:#fce4ec;}
     body.dark-mode .help-close{color:#ffb6c1;}
-    @media (max-width:1200px){
-      .dashboard{grid-template-columns:1fr;padding:20px;}
-      .stats-row{grid-template-columns:repeat(2,1fr);}
+    @media (max-width:1400px){
+      .dashboard{grid-template-columns:clamp(240px,28vw,380px) 1fr;}
+    }
+    @media (max-width:1100px){
+      .dashboard{grid-template-columns:1fr;}
+    }
+    @media (max-width:900px){
+      .store-pane-body{max-height:none;}
     }
   </style>
 </head>
@@ -189,10 +239,10 @@
               <input type="text" id="newStoreCode" placeholder="Store Code"/>
               <input type="text" id="newStoreName" placeholder="Store Name"/>
               <select id="newStoreRank">
-                <option value="AA">AA - Premium</option>
+                <option value="AA">AA - Above A</option>
                 <option value="A">A - High</option>
-                <option value="B" selected>B - Standard</option>
-                <option value="C">C - Regular</option>
+                <option value="B" selected>B - Medium</option>
+                <option value="C">C - Low</option>
               </select>
               <label style="display:flex;align-items:center;gap:8px;font-size:14px;">
                 <input type="checkbox" id="newStoreActive" checked/> Start as active
@@ -224,12 +274,15 @@
           </div>
 
           <div class="import-content active" id="upload-content">
-            <div class="upload-area">
+            <div class="upload-area" id="uploadArea">
               <h4>Upload Excel File</h4>
               <p style="margin:10px 0;font-size:14px;color:#666;">Choose .xlsx, .xlsm, or .xls files</p>
               <p style="margin:5px 0;font-size:12px;color:#888;">✨ Supports store codes OR store names</p>
               <input type="file" id="fileInput" accept=".xlsx,.xlsm,.xls" onchange="handleFileUpload(event)" style="display:none;"/>
               <button class="big-button" onclick="document.getElementById('fileInput').click()">Choose File</button>
+              <label style="display:flex;align-items:center;gap:8px;justify-content:center;margin-top:10px;font-size:12px;color:#555">
+                <input type="checkbox" id="combineToggle"/> Combine duplicate item-store lines on import
+              </label>
               <div id="fileStatus" style="font-size:12px;margin-top:10px;"></div>
             </div>
           </div>
@@ -241,11 +294,14 @@
               <p style="font-size:12px;color:#888;">Format: ItemNumber, Quantity, StoreCode/StoreName</p>
             </div>
             <textarea id="pasteArea" placeholder="Example:&#10;NSN-0402-21, 10, 101&#10;NSN-0405-04, 20, NIAGARA 1&#10;NSN-0405-05, 15, MISSISSAUGA" style="width:100%;height:100px;font-size:12px;padding:10px;border:1px solid #ddd;border-radius:6px;font-family:monospace;"></textarea>
-            <button class="big-button success" onclick="processPastedData()" style="margin-top:10px;width:100%;">Process Data</button>
+            <label style="display:flex;align-items:center;gap:8px;justify-content:center;margin-top:8px;font-size:12px;color:#555">
+              <input type="checkbox" id="combineToggle2"/> Combine duplicate item-store lines on import
+            </label>
+            <button class="big-button success" onclick="processPastedData()" style="margin-top:8px;width:100%;">Process Data</button>
           </div>
         </div>
 
-        <div style="display:grid;grid-template-columns:2fr 1fr;gap:20px;">
+        <div class="two-col">
           <div class="card">
             <h3>📦 Import Queue</h3>
             <div class="queue" id="importContainer">
@@ -291,7 +347,7 @@
       
       <div style="line-height:1.6;">
         <h3 style="color:var(--pink-1);margin:20px 0 10px 0;">🪪 Store Management</h3>
-        <p>Manage your store list with codes, names, and priority ranks (AA=Premium, A=High, B=Standard, C=Regular). Toggle stores active/inactive and add new stores as needed.</p>
+        <p>Manage your store list with codes, names, and priority ranks (AA=Above A, A=High, B=Medium, C=Low). Toggle stores active/inactive and add new stores as needed.</p>
         
         <h3 style="color:var(--pink-1);margin:20px 0 10px 0;">📤 Import Data</h3>
         <p><strong>Excel Upload:</strong> Upload .xlsx/.xls files with Item, Quantity, and Store columns. Auto-detects headers and supports both store codes and store names.</p>
@@ -299,7 +355,8 @@
         
         <h3 style="color:var(--pink-1);margin:20px 0 10px 0;">🚀 Sort & Distribute</h3>
         <p><strong>Sort by Store:</strong> Organizes items by destination and identifies issues (inactive stores, missing stores).</p>
-        <p><strong>Distribute Problem → Active:</strong> Automatically redistributes items from inactive or unknown stores to active ones using rank-weighted distribution.</p>
+        <p><strong>Manual Assign Selected → Re-Sort:</strong> For each problem row, choose a target store from the dropdown, then apply and re-sort.</p>
+        <p><strong>Auto-Distribute Problems → Active (by Rank):</strong> Automatically redistributes items from inactive or unknown stores to active ones using rank-weighted distribution.</p>
         
         <h3 style="color:var(--pink-1);margin:20px 0 10px 0;">📋 Copy & Export</h3>
         <p><strong>Copy Store Items:</strong> Click 📋 Copy to copy item lists (Tab-separated). Hold Alt for CSV format.</p>
@@ -316,6 +373,11 @@
   </div>
 
   <div id="copyToast" class="toast">Copied!</div>
+  <div id="actionToast" class="toast" style="left:50%;transform:translate(-50%,10px);right:auto;bottom:24px;">Action done. <button id="undoBtn" class="copy-btn" style="margin-left:8px;">Undo</button></div>
+  <div id="ariaStatus" class="sr-only" aria-live="polite"></div>
+
+  <!-- Go To Top Button -->
+  <button id="backToTopBtn" class="back-to-top" aria-label="Go to top" title="Go to top">↑</button>
 
   <!-- Footer -->
   <footer class="footer">
@@ -337,6 +399,7 @@
     const RANK_WEIGHTS = { AA: 4, A: 3, B: 2, C: 1 };
     const COOKIE_NAME = 'allocationBuddyPrefs';
     const COOKIE_DAYS = 365;
+    const APP_STATE_KEY = 'allocationBuddyStateV1';
 
     // ---------- Defaults & helpers ----------
     const DEFAULT_STORES = Object.freeze([
@@ -385,6 +448,35 @@
     const collapsedStores = {};
     const copiedStores = {};
     let allStores = cloneDefaults(); // start from defaults
+    let appStateLoaded = false;
+
+    // Virtualization settings and state
+    const IMPORT_CHUNK = 300;
+    const RESULTS_STORE_CHUNK = 50;
+    const RESULTS_ITEMS_CHUNK = 300;
+    let importRenderLimit = IMPORT_CHUNK;
+    let resultsStoreRenderLimit = RESULTS_STORE_CHUNK;
+    const expandedStoreItems = {}; // storeCode -> true when expanded
+
+    // Fast store lookups (O(1) by code or exact name)
+    const storeIndex = {
+      byCode: new Map(),
+      byNameUpper: new Map()
+    };
+    const rebuildStoreIndex = () => {
+      storeIndex.byCode.clear();
+      storeIndex.byNameUpper.clear();
+      allStores.forEach(s => {
+        s._codeNum = parseInt(String(s.code));
+        if (!Number.isFinite(s._codeNum)) s._codeNum = 999999;
+        storeIndex.byCode.set(String(s.code), s);
+        storeIndex.byNameUpper.set(String(s.name).toUpperCase(), s);
+      });
+    };
+    const getStoreByCode = code => storeIndex.byCode.get(String(code));
+    const getStoreByNameUpper = nameUpper => storeIndex.byNameUpper.get(String(nameUpper).toUpperCase());
+    // Initialize index on load
+    rebuildStoreIndex();
 
     // Utilities
     const setCookie = (name, value, days = COOKIE_DAYS) => {
@@ -405,16 +497,93 @@
       }, null);
     };
 
-    const sortStoresNumerically = arr => arr.slice().sort((a, b) => 
-      (parseInt(String(a.code || a.storeCode)) || 999999) - (parseInt(String(b.code || b.storeCode)) || 999999)
-    );
+    // ---------- Persistent App State (localStorage) ----------
+    const saveAppState = () => {
+      try {
+        const state = {
+          v: 1,
+          darkMode: document.body.classList.contains('dark-mode'),
+          allStores,
+          itemsToSort,
+          lastResults,
+          redistributionDeltas,
+          collapsedStores,
+          copiedStores
+        };
+        localStorage.setItem(APP_STATE_KEY, JSON.stringify(state));
+      } catch (e) {
+        // ignore quota or serialization errors
+      }
+    };
+
+    const loadAppState = () => {
+      try {
+        const raw = localStorage.getItem(APP_STATE_KEY);
+        if (!raw) return false;
+        const state = JSON.parse(raw);
+        if (!state || typeof state !== 'object') return false;
+
+        if (Array.isArray(state.allStores) && state.allStores.length > 0) {
+          allStores = state.allStores.map(s => ({...s}));
+        }
+        rebuildStoreIndex();
+
+        if (Array.isArray(state.itemsToSort)) itemsToSort = state.itemsToSort.map(x => ({...x}));
+        lastResults = state.lastResults || null;
+        redistributionDeltas = state.redistributionDeltas || {};
+
+        // Merge into existing objects
+        if (state.collapsedStores && typeof state.collapsedStores === 'object') Object.assign(collapsedStores, state.collapsedStores);
+        if (state.copiedStores && typeof state.copiedStores === 'object') Object.assign(copiedStores, state.copiedStores);
+
+        // Dark mode (from state)
+        if (typeof state.darkMode === 'boolean') {
+          document.body.classList.toggle('dark-mode', state.darkMode);
+          $('toggleSwitch').classList.toggle('active', state.darkMode);
+          $('modeIcon').textContent = state.darkMode ? '🌙' : '☀️';
+        }
+
+        // Reflect to UI
+        updateStoreStatus();
+        updateImportDisplay();
+        if (lastResults?.sortedStores?.length) {
+          const section = $('fullResultsSection');
+          section.classList.remove('hidden');
+          displayResults(lastResults);
+          $('totalProcessed').textContent = (lastResults.validItems?.length || 0) + (lastResults.issues?.length || 0);
+        }
+        updateDistributeButtonState();
+        appStateLoaded = true;
+        return true;
+      } catch (e) { return false; }
+    };
+
+    const clearAppState = () => {
+      try { localStorage.removeItem(APP_STATE_KEY); } catch(e) {}
+    };
+
+    const getCodeNumFromObj = (obj) => {
+      if (!obj) return 999999;
+      if (Object.prototype.hasOwnProperty.call(obj, '_codeNum')) return obj._codeNum;
+      const codeLike = obj.code ?? obj.storeCode;
+      const n = parseInt(String(codeLike));
+      return Number.isFinite(n) ? n : 999999;
+    };
+    const sortStoresNumerically = arr => arr.slice().sort((a, b) => getCodeNumFromObj(a) - getCodeNumFromObj(b));
 
     const findStoreByCodeOrName = identifier => {
       if (!identifier) return null;
       const searchStr = String(identifier).trim();
-      return allStores.find(s => String(s.code) === searchStr) ||
-             allStores.find(s => s.name.toUpperCase() === searchStr.toUpperCase()) ||
-             allStores.find(s => s.name.toUpperCase().includes(searchStr.toUpperCase()));
+      const byCode = getStoreByCode(searchStr);
+      if (byCode) return byCode;
+      const upper = searchStr.toUpperCase();
+      const byName = getStoreByNameUpper(upper);
+      if (byName) return byName;
+      // Fallback: partial match (O(n))
+      for (const s of storeIndex.byNameUpper.values()) {
+        if (String(s.name).toUpperCase().includes(upper)) return s;
+      }
+      return null;
     };
 
     const showStatus = (html, type = 'info') => {
@@ -427,9 +596,7 @@
     const saveUserPreferences = () => {
       const preferences = {
         darkMode: document.body.classList.contains('dark-mode'),
-        storeStates: allStores.map(s => ({code: s.code, active: s.active})),
-        lastImportTab: getActiveImportTab(),
-        lastStoreTab: $('.sidebar .import-tab.active')?.textContent?.includes('Manage') ? 'manage' : 'add'
+        storeStates: allStores.map(s => ({code: s.code, active: s.active}))
       };
       setCookie(COOKIE_NAME, preferences);
     };
@@ -455,23 +622,17 @@
       }
 
       // Store states (only apply active flags if they match existing codes)
-      if (Array.isArray(prefs.storeStates)) {
+      if (!appStateLoaded && Array.isArray(prefs.storeStates)) {
         const codes = new Set(allStores.map(s => s.code));
         prefs.storeStates.forEach(savedStore => {
           if (codes.has(savedStore.code)) {
-            const store = allStores.find(s => s.code === savedStore.code);
+            const store = getStoreByCode(savedStore.code);
             if (store) store.active = !!savedStore.active;
           }
         });
       }
 
-      // Restore tabs after DOM is ready
-      setTimeout(() => {
-        ['import', 'store'].forEach(type => {
-          const tabName = prefs[`last${type.charAt(0).toUpperCase() + type.slice(1)}Tab`];
-          if (tabName) switchTab(type, tabName, false);
-        });
-      }, 50);
+      // Do not restore tabs from preferences; keep HTML defaults
     };
 
     // Help functions
@@ -512,7 +673,8 @@
 
     const updateStoreStatus = () => {
       updateStoreCounts();
-      $('storeStatusContainer').innerHTML = sortStoresNumerically(allStores)
+      const cont = $('storeStatusContainer');
+      cont.innerHTML = sortStoresNumerically(allStores)
         .map(store => `
           <div class="store-item">
             <input type="checkbox" ${store.active ? 'checked' : ''} onchange="toggleStoreStatus('${store.code}', this.checked)"/>
@@ -524,15 +686,19 @@
             <button class="remove-btn" onclick="removeStore('${store.code}')">×</button>
           </div>`)
         .join('');
+      cont.classList.add('update-flash');
+      setTimeout(()=>cont.classList.remove('update-flash'), 400);
       updateDistributeButtonState();
+      if (typeof syncSidebarToQueue === 'function') syncSidebarToQueue();
     };
 
     const toggleStoreStatus = (storeCode, isActive) => {
-      const store = allStores.find(s => s.code === storeCode);
+      const store = getStoreByCode(storeCode);
       if (store) {
         store.active = isActive;
         updateStoreCounts();
         saveUserPreferences();
+        saveAppState();
         updateDistributeButtonState();
       }
     };
@@ -541,14 +707,17 @@
       allStores.forEach(s => s.active = active);
       updateStoreStatus();
       saveUserPreferences();
+      saveAppState();
     };
 
     const removeStore = storeCode => {
       if (confirm(`Delete store ${storeCode}?`)) {
         allStores = allStores.filter(s => s.code !== storeCode);
+        rebuildStoreIndex();
         updateStoreStatus();
         updateDistributeButtonState();
         saveUserPreferences();
+        saveAppState();
       }
     };
 
@@ -559,9 +728,10 @@
       const active = $('newStoreActive').checked;
       
       if (!code || !name) { alert('Please enter both code and name'); return; }
-      if (allStores.find(s => s.code === code)) { alert('Store code already exists'); return; }
+      if (getStoreByCode(code)) { alert('Store code already exists'); return; }
       
       allStores.push({code, name: name.toUpperCase(), rank, active});
+      rebuildStoreIndex();
       ['newStoreCode', 'newStoreName'].forEach(id => $(id).value = '');
       $('newStoreRank').value = 'B';
       $('newStoreActive').checked = true;
@@ -569,27 +739,46 @@
       switchTab('store', 'manage');
       updateDistributeButtonState();
       saveUserPreferences();
+      saveAppState();
     };
 
     // New: re-add default stores on demand
     const restoreDefaults = () => {
       if (!confirm('Re-add all default stores? This will overwrite your current list.')) return;
       allStores = cloneDefaults();
+      rebuildStoreIndex();
       // clear stale prefs so defaults persist on reload
       document.cookie = "allocationBuddyPrefs=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Strict";
       updateStoreStatus();
       updateDistributeButtonState();
       saveUserPreferences();
       showStatus('<strong>✅ Default stores restored.</strong>', 'success');
+      saveAppState();
     };
 
     // Import handling
     const handleFileUpload = event => {
       const file = event.target.files[0];
       if (!file) return;
-      
       $('fileStatus').innerHTML = '📊 Reading file...';
-      
+      importFile(file);
+    };
+
+    // Saved column mappings per sheet
+    const COLMAP_KEY = 'allocationBuddyColMapV1';
+    const getSavedMappingForSheet = (sheetName) => {
+      try { const all = JSON.parse(localStorage.getItem(COLMAP_KEY) || '{}'); return all && all[sheetName] ? all[sheetName] : null; } catch(e){ return null; }
+    };
+    const saveMappingForSheet = (sheetName, mapping) => {
+      try { const all = JSON.parse(localStorage.getItem(COLMAP_KEY) || '{}'); all[sheetName] = mapping; localStorage.setItem(COLMAP_KEY, JSON.stringify(all)); } catch(e){}
+    };
+    const applySavedMappingIfAny = () => {
+      const sel = $('sheetSelector'); if (!sel) return;
+      const name = sel.value; const map = getSavedMappingForSheet(name);
+      if (map) { importFromSheet(name, map); } else { $('fileStatus').innerHTML += '<div style="font-size:12px;color:#888;margin-top:6px;">No saved mapping for this sheet.</div>'; }
+    };
+
+    const importFile = (file) => {
       const reader = new FileReader();
       reader.onload = e => {
         try {
@@ -616,6 +805,7 @@
             <button class="big-button" onclick="importSelectedSheet()" style="padding: 6px 12px; font-size: 12px;">Import</button>
           </div>
           <button class="big-button" onclick="showColumnMapper()" style="margin-top: 8px; width: 100%; font-size: 12px;">Advanced Import (Column Mapping)</button>
+          <button class="big-button" onclick="applySavedMappingIfAny()" style="margin-top: 6px; width: 100%; font-size: 12px;">Use Saved Mapping (if available)</button>
         </div>`;
     };
 
@@ -635,6 +825,9 @@
         let headerRow = -1, itemCol = 0, qtyCol = 1, storeCol = 2;
         
         if (!columnMapping) {
+          // Try saved mapping first
+          const savedMap = getSavedMappingForSheet(sheetName);
+          if (savedMap) { ({itemCol, qtyCol, storeCol, headerRow} = savedMap); debugOutput += `<div style="font-size:11px;color:#888;margin-top:6px;">Used saved column mapping for "${sheetName}"</div>`; }
           for (let i = 0; i < Math.min(5, rows.length); i++) {
             const row = rows[i];
             const itemPatterns = /(item|style|item\s*no|item\s*number)/i;
@@ -661,6 +854,8 @@
           }
         } else {
           ({itemCol, qtyCol, storeCol, headerRow} = columnMapping);
+          // persist mapping
+          saveMappingForSheet(sheetName, columnMapping);
         }
 
         let imported = 0, skipped = 0;
@@ -719,6 +914,8 @@
         
         $('fileStatus').innerHTML = statusMsg;
         updateImportDisplay();
+        if (shouldCombineDuplicates && shouldCombineDuplicates()) combineAllDuplicates();
+        saveAppState();
       } catch (err) {
         $('fileStatus').innerHTML = `❌ Import error: ${err.message}`;
       }
@@ -813,6 +1010,8 @@
       if (imported > 0) {
         $('pasteArea').value = '';
         updateImportDisplay();
+        if (shouldCombineDuplicates && shouldCombineDuplicates()) combineAllDuplicates();
+        saveAppState();
         let message = `✅ Added ${imported} items`;
         if (skipped > 0) {
           message += ` (${skipped} rows skipped)`;
@@ -837,8 +1036,12 @@
       }
       
       clearBtn.classList.remove('hidden');
-      $('importContainer').innerHTML = itemsToSort.map((item, index) => {
-        const store = allStores.find(s => s.code === item.storeCode);
+      if (!Number.isFinite(importRenderLimit) || importRenderLimit < 1) importRenderLimit = IMPORT_CHUNK;
+      const total = itemsToSort.length;
+      const limit = Math.min(importRenderLimit, total);
+      const visible = itemsToSort.slice(0, limit);
+      const listHtml = visible.map((item, index) => {
+        const store = getStoreByCode(item.storeCode);
         const status = !store ? 'NOT FOUND' : (store.active ? 'ACTIVE' : 'INACTIVE');
         const statusColor = !store ? '#e74c3c' : (store.active ? '#27ae60' : '#f39c12');
         return `
@@ -850,11 +1053,79 @@
             <button class="remove-btn" onclick="removeItem(${index})">×</button>
           </div>`;
       }).join('');
+      const more = total - limit;
+      const moreHtml = more > 0 ? `
+        <div style="display:flex;justify-content:center;margin-top:8px;">
+          <button class="big-button" onclick="loadMoreImport()">Show more (${more})</button>
+        </div>` : '';
+      const cont = $('importContainer');
+      cont.innerHTML = listHtml + moreHtml;
+      cont.classList.add('update-flash');
+      setTimeout(()=>cont.classList.remove('update-flash'), 400);
       updateDistributeButtonState();
+      if (typeof syncSidebarToQueue === 'function') syncSidebarToQueue();
     };
 
-    const removeItem = index => { itemsToSort.splice(index,1); updateImportDisplay(); };
-    const clearImport = () => { if(confirm('Clear all items?')){ itemsToSort=[]; updateImportDisplay(); } };
+    const loadMoreImport = () => {
+      importRenderLimit = Math.min(importRenderLimit + IMPORT_CHUNK, itemsToSort.length);
+      updateImportDisplay();
+    };
+
+    const removeItem = index => {
+      const cont = $('importContainer');
+      const nodes = cont ? cont.querySelectorAll('.queue-item') : [];
+      const node = nodes && nodes[index];
+      const removed = itemsToSort[index];
+      if (!removed) return;
+      startUndo({type:'removeItem', payload:{item:{...removed}, index}});
+      if (node) {
+        node.classList.add('removing');
+        setTimeout(() => { itemsToSort.splice(index,1); updateImportDisplay(); saveAppState(); }, 200);
+      } else {
+        itemsToSort.splice(index,1); updateImportDisplay(); saveAppState();
+      }
+    };
+    const clearImport = () => { if(confirm('Clear all items?')){ const prev=[...itemsToSort]; startUndo({type:'clearImport', payload:{items:prev}}); itemsToSort=[]; updateImportDisplay(); saveAppState(); } };
+
+    // -------- Combine duplicate items helper --------
+    const shouldCombineDuplicates = () => !!($('combineToggle')?.checked || $('combineToggle2')?.checked);
+    const combineAllDuplicates = () => {
+      const map = new Map();
+      const combined = [];
+      itemsToSort.forEach(it => {
+        const key = `${it.itemNumber}|${it.storeCode}`;
+        if (!map.has(key)) { map.set(key, {...it}); combined.push(map.get(key)); }
+        else { map.get(key).quantity += it.quantity; }
+      });
+      itemsToSort = combined;
+      updateImportDisplay();
+      saveAppState();
+      showStatus('<strong>✅ Combined duplicate lines.</strong>', 'success');
+    };
+
+    // -------- Undo actions (Remove item / Clear import / Remove store) --------
+    let pendingUndo = null;
+    const showActionToast = (message, onUndo) => {
+      const t = $('actionToast'); if (!t) return;
+      t.innerHTML = `${message} <button id="undoBtn" class="copy-btn" style="margin-left:8px;">Undo</button>`;
+      t.classList.add('show');
+      const btn = $('undoBtn');
+      const close = () => t.classList.remove('show');
+      if (btn) btn.onclick = () => { try { onUndo && onUndo(); } finally { close(); pendingUndo=null; } };
+      setTimeout(close, 5000);
+    };
+    const startUndo = (action) => {
+      pendingUndo = action;
+      if (action.type === 'removeItem') {
+        showActionToast('Item removed.', () => {
+          const {item, index} = action.payload; itemsToSort.splice(Math.min(index, itemsToSort.length), 0, item); updateImportDisplay(); saveAppState();
+        });
+      } else if (action.type === 'clearImport') {
+        showActionToast('Cleared import.', () => { itemsToSort = action.payload.items; updateImportDisplay(); saveAppState(); });
+      } else if (action.type === 'removeStore') {
+        showActionToast('Store removed.', () => { allStores.push(action.payload.store); rebuildStoreIndex(); updateStoreStatus(); saveUserPreferences(); });
+      }
+    };
 
     // Distribution and sorting
     const rankWeight = rank => RANK_WEIGHTS[String(rank).toUpperCase()] || 1;
@@ -866,16 +1137,99 @@
         .filter(s => s.active && resultCodes.has(s.code))
         .sort((a,b) => {
           const w = rankWeight(b.rank) - rankWeight(a.rank);
-          return w !== 0 ? w : (parseInt(a.code)||999999) - (parseInt(b.code)||999999);
+          return w !== 0 ? w : ((a._codeNum||999999) - (b._codeNum||999999));
         });
     };
 
     const hasProblemAssignments = () => {
       if (lastResults?.issues) return lastResults.issues.some(i => i.type === 'inactive' || i.type === 'not_found');
       return itemsToSort.some(it => {
-        const s = allStores.find(x => x.code === it.storeCode);
+        const s = getStoreByCode(it.storeCode);
         return !s || (s && !s.active);
       });
+    };
+
+    // Manual assignment helpers
+    const getAllActiveStoresSorted = () => {
+      return allStores
+        .filter(s => s.active)
+        .sort((a,b) => {
+          const w = rankWeight(b.rank) - rankWeight(a.rank);
+          const an = (a._codeNum || getCodeNumFromObj(a));
+          const bn = (b._codeNum || getCodeNumFromObj(b));
+          return w !== 0 ? w : (an - bn);
+        });
+    };
+    const buildStoreOptionsHTML = (excludeCode = null) => {
+      // Sort Assign-To dropdown by store code (ascending)
+      const active = allStores
+        .filter(s => s.active)
+        .slice()
+        .sort((a,b) => (a._codeNum ?? getCodeNumFromObj(a)) - (b._codeNum ?? getCodeNumFromObj(b)));
+      if (!active.length) return '<option value="">No active stores</option>';
+      const rows = ['<option value="">Select store…</option>'];
+      active.forEach(s => { if (!excludeCode || s.code !== excludeCode) rows.push(`<option value="${s.code}">${s.code} - ${s.name} (${s.rank})</option>`); });
+      return rows.join('');
+    };
+
+    const assignSelectedIssues = () => {
+      const selects = document.querySelectorAll('.assign-select');
+      let movedLines = 0, movedQty = 0;
+      // Track deltas like auto-redistribute so UI highlights rows
+      const pendingDeltas = {};
+      selects.forEach(sel => {
+        const target = sel.value;
+        if (!target) return;
+        const itemNumber = sel.getAttribute('data-item');
+        const fromCode = sel.getAttribute('data-store');
+        const qty = parseInt(sel.getAttribute('data-qty')) || 0;
+        const targetStore = getStoreByCode(target);
+        if (!targetStore || !targetStore.active) return;
+
+        let idx = itemsToSort.findIndex(it => it.itemNumber === itemNumber && it.storeCode === fromCode && it.quantity === qty);
+        if (idx === -1) idx = itemsToSort.findIndex(it => it.itemNumber === itemNumber && it.storeCode === fromCode);
+        if (idx === -1) return;
+
+        const src = itemsToSort[idx];
+        itemsToSort.splice(idx, 1);
+
+        const existingIdx = itemsToSort.findIndex(it => it.itemNumber === itemNumber && it.storeCode === target);
+        if (existingIdx >= 0) {
+          itemsToSort[existingIdx].quantity += qty;
+          itemsToSort[existingIdx].source = 'Manual';
+        } else {
+          itemsToSort.push({ itemNumber, quantity: qty, storeCode: target, source: 'Manual' });
+        }
+        const key = `${itemNumber}|${target}`;
+        pendingDeltas[key] = (pendingDeltas[key] || 0) + qty;
+        movedLines += 1;
+        movedQty += qty;
+      });
+
+      if (movedLines === 0) {
+        showStatus('<strong>Info:</strong> No assignments selected. Choose a target store first.', 'info');
+        return;
+      }
+
+      lastResults = null;
+      if (movedLines > 0) {
+        // Accumulate manual highlights; keep previous entries
+        Object.keys(pendingDeltas).forEach(key => {
+          const val = pendingDeltas[key] || 0;
+          const entry = redistributionDeltas[key] || {auto:0, manual:0};
+          // Backward-compat if numeric stored previously
+          if (typeof entry === 'number') {
+            redistributionDeltas[key] = {auto:entry, manual:val};
+          } else {
+            entry.manual = (entry.manual || 0) + val;
+            redistributionDeltas[key] = entry;
+          }
+        });
+      }
+      updateImportDisplay();
+      saveAppState();
+      showStatus(`<strong>✅ Assigned:</strong> ${movedLines} line(s), ${movedQty} unit(s). Resorting...`, 'success');
+      setTimeout(() => sortItems(), 50);
     };
 
     const distributeProblemItems = () => {
@@ -886,13 +1240,20 @@
         return {moved:0, lines:0, targets:0};
       }
 
+      // Preserve previous manual highlights; clear only auto deltas
+      const prevD = redistributionDeltas || {};
       redistributionDeltas = {};
+      Object.keys(prevD).forEach(k => {
+        const v = prevD[k];
+        const manual = typeof v === 'number' ? 0 : (v?.manual || 0);
+        if (manual > 0) redistributionDeltas[k] = {auto:0, manual};
+      });
       const redistributedItems = [];
       const problemAssignments = [];
       const keep = [];
 
       itemsToSort.forEach(it => {
-        const s = allStores.find(x => x.code === it.storeCode);
+        const s = getStoreByCode(it.storeCode);
         if (!s || !s.active) problemAssignments.push(it); else keep.push(it);
       });
 
@@ -924,7 +1285,13 @@
           if (q > 0) {
             const sc = targets[i].code;
             const key = `${src.itemNumber}|${sc}`;
-            redistributionDeltas[key] = (redistributionDeltas[key] || 0) + q;
+            const entry = redistributionDeltas[key] || {auto:0, manual:0};
+            if (typeof entry === 'number') {
+              redistributionDeltas[key] = {auto: entry + q, manual: 0};
+            } else {
+              entry.auto = (entry.auto || 0) + q;
+              redistributionDeltas[key] = entry;
+            }
             redistributedItems.push({
               itemNumber: src.itemNumber,
               quantity: q,
@@ -954,6 +1321,7 @@
       lastResults = null;
       showStatus(`<strong>✅ Redistributed:</strong> ${problemAssignments.length} line(s), ${movedQty} unit(s) → ${targets.length} eligible store(s).`, 'success');
       updateDistributeButtonState();
+      saveAppState();
       return {moved:movedQty, lines:problemAssignments.length, targets:targets.length};
     };
 
@@ -970,9 +1338,12 @@
       setTimeout(() => {
         const validItems = [];
         const issues = [];
+        // Reset results virtualization for a fresh view
+        resultsStoreRenderLimit = RESULTS_STORE_CHUNK;
+        for (const k in expandedStoreItems) delete expandedStoreItems[k];
         
         itemsToSort.forEach(item => {
-          const store = allStores.find(s => s.code === item.storeCode);
+          const store = getStoreByCode(item.storeCode);
           if (!store) {
             issues.push({type:'not_found', itemNumber:item.itemNumber, quantity:item.quantity, storeCode:item.storeCode, message:`Store ${item.storeCode} not found`});
           } else if (!store.active) {
@@ -1003,6 +1374,7 @@
         section.classList.remove('hidden');
         updateDistributeButtonState();
         section.scrollIntoView({behavior:'smooth'});
+        saveAppState();
       }, 80);
     };
 
@@ -1044,6 +1416,14 @@
     const toggleStoreCollapse = storeCode => {
       collapsedStores[storeCode] = !collapsedStores[storeCode];
       if (lastResults) displayResults(lastResults);
+      saveAppState();
+    };
+
+    const collapseAllStores = (collapse = true) => {
+      if (!lastResults?.sortedStores) return;
+      lastResults.sortedStores.forEach(s => { collapsedStores[s.storeCode] = collapse; });
+      displayResults(lastResults);
+      saveAppState();
     };
 
     const copyStoreItems = async (storeCode, evt) => {
@@ -1057,6 +1437,7 @@
         copiedStores[storeCode] = true;
         collapsedStores[storeCode] = true;
         displayResults(lastResults);
+        saveAppState();
       } else {
         showToast('Copy failed');
       }
@@ -1071,7 +1452,8 @@
         const totalIssueQty = issues.reduce((s,i) => s+i.quantity, 0);
         const hasProblems = issues.some(i => i.type === 'inactive' || i.type === 'not_found');
 
-        $('issuesContainer').innerHTML = `
+        const issuesEl = $('issuesContainer');
+        issuesEl.innerHTML = `
           <div class="simple-alert alert-warning" style="margin-bottom:12px;">
             <strong>⚠️ ${issues.length} Items Need Attention</strong>
           </div>
@@ -1081,8 +1463,8 @@
               <div class="store-pane-stats">${totalIssueQty} units</div>
             </div>
             <div class="store-pane-body">
-              <table class="store-pane-table">
-                <thead><tr><th>Item</th><th>Qty</th><th>Store Code</th><th>Issue</th></tr></thead>
+              <table class="store-pane-table sticky-head">
+                <thead><tr><th>Item</th><th>Qty</th><th>Store Code</th><th>Issue</th><th>Assign To</th></tr></thead>
                 <tbody>
                   ${issues.map(issue => `
                     <tr>
@@ -1090,32 +1472,54 @@
                       <td>${issue.quantity}</td>
                       <td>${issue.storeCode}</td>
                       <td style="color:${issue.type === 'not_found' ? 'var(--danger)' : 'var(--warning)'};">${issue.message}</td>
+                      <td>
+                        <select class="assign-select" data-item="${issue.itemNumber}" data-store="${issue.storeCode}" data-qty="${issue.quantity}" style="min-width:220px;">
+                          ${buildStoreOptionsHTML(issue.storeCode)}
+                        </select>
+                      </td>
                     </tr>`).join('')}
                 </tbody>
               </table>
-              <div style="display:flex;justify-content:flex-end;margin-top:12px;">
-                <button id="distributeBtn" class="big-button" onclick="distributeAndResort()"
-                        ${hasProblems ? '' : 'disabled'}
-                        title="${hasProblems ? 'Redistribute items from inactive or unknown stores' : 'No problem items to distribute'}">
-                  Distribute Problem → Active (Rank-Weighted)
-                </button>
-              </div>
+            </div>
+            <div class="store-pane-actions">
+              <button class="big-button success" onclick="assignSelectedIssues()" title="Move selected problem items to the chosen target stores and re-sort results">Manual Assign Selected → Re-Sort</button>
+              <button id="distributeBtn" class="big-button" onclick="distributeAndResort()"
+                      ${hasProblems ? '' : 'disabled'}
+                      title="${hasProblems ? 'Automatically redistribute items from inactive or unknown stores to active stores based on rank priority, then re-sort results' : 'No problem items to distribute'}">
+                Auto-Distribute Problems → Active (by Rank)
+              </button>
             </div>
           </div>`;
+        issuesEl.classList.add('update-flash');
+        setTimeout(()=>issuesEl.classList.remove('update-flash'), 450);
       } else {
         $('issuesContainer').classList.add('hidden');
         $('issuesContainer').innerHTML = '';
       }
 
-      $('resultsContainer').innerHTML = `
+      const totalStores = sortedStores.length;
+      const storeLimit = Math.min(resultsStoreRenderLimit, totalStores);
+      const visibleStores = sortedStores.slice(0, storeLimit);
+
+      const resultsEl = $('resultsContainer');
+      resultsEl.innerHTML = `
         <div class="simple-alert alert-info">
           <strong>📦 Items Sorted by Store</strong> - ${validItems.length} items sorted to ${sortedStores.length} active stores
-          ${hasAnyDeltas ? `<div class="legend-note">Green tags/rows indicate units added by the <em>last redistribution</em>.</div>` : ''}
+          ${hasAnyDeltas ? `<div class=\"legend-note\">Green = auto, Yellow = manual additions.</div>` : ''}
         </div>
         <div class="store-panes">
-          ${sortedStores.map(store => {
+          ${visibleStores.map(store => {
             const itemsSorted = store.items.slice().sort((a,b) => a.itemNumber.localeCompare(b.itemNumber));
-            const storeDelta = itemsSorted.reduce((sum,it) => sum + (redistributionDeltas[`${it.itemNumber}|${store.storeCode}`] || 0), 0);
+            const expanded = !!expandedStoreItems[store.storeCode];
+            const itemsLimited = expanded ? itemsSorted : itemsSorted.slice(0, RESULTS_ITEMS_CHUNK);
+            const storeDeltaAuto = itemsSorted.reduce((sum,it) => {
+              const d = redistributionDeltas[`${it.itemNumber}|${store.storeCode}`];
+              return sum + (typeof d === 'number' ? d : (d?.auto || 0));
+            }, 0);
+            const storeDeltaManual = itemsSorted.reduce((sum,it) => {
+              const d = redistributionDeltas[`${it.itemNumber}|${store.storeCode}`];
+              return sum + (typeof d === 'number' ? 0 : (d?.manual || 0));
+            }, 0);
             const isCollapsed = collapsedStores[store.storeCode];
             const isCopied = copiedStores[store.storeCode];
 
@@ -1132,31 +1536,60 @@
                   </div>
                   <div class="store-pane-stats">
                     ${store.totalQuantity} units total
-                    ${storeDelta > 0 ? `<span class="delta-badge">+${storeDelta} redistributed</span>` : ''}
+                    ${storeDeltaManual > 0 ? `<span class=\"delta-badge manual\">+${storeDeltaManual}</span>` : ''}
+                    ${storeDeltaAuto > 0 ? `<span class=\"delta-badge auto\">+${storeDeltaAuto}</span>` : ''}
                     <button class="copy-btn" title="Copy Item & Qty (Tab). Hold Alt for CSV" onclick="copyStoreItems('${store.storeCode}', event)">📋 Copy</button>
                   </div>
                 </div>
                 <div class="store-pane-body">
-                  <table class="store-pane-table">
+                  <table class="store-pane-table sticky-head">
                     <thead><tr><th>Item</th><th>Qty</th><th>Code</th></tr></thead>
                     <tbody>
-                      ${itemsSorted.map(it => {
-                        const d = redistributionDeltas[`${it.itemNumber}|${store.storeCode}`] || 0;
-                        const rowClass = d > 0 ? 'redistributed-row' : '';
+                      ${itemsLimited.map(it => {
+                        const deltaRaw = redistributionDeltas[`${it.itemNumber}|${store.storeCode}`];
+                        const dAuto = typeof deltaRaw === 'number' ? deltaRaw : (deltaRaw?.auto || 0);
+                        const dManual = typeof deltaRaw === 'number' ? 0 : (deltaRaw?.manual || 0);
+                        const rowClass = `${dAuto>0 ? 'redistributed-row' : ''} ${dManual>0 ? 'manual-row' : ''}`.trim();
                         return `
                         <tr class="${rowClass}">
                           <td><strong>${it.itemNumber}</strong></td>
-                          <td>${it.quantity}${d>0 ? ` <span class="delta-badge">+${d}</span>` : ''}</td>
+                          <td>${it.quantity}
+                            ${dManual>0 ? ` <span class=\"delta-badge manual\">+${dManual}</span>` : ''}
+                            ${dAuto>0 ? ` <span class=\"delta-badge auto\">+${dAuto}</span>` : ''}
+                          </td>
                           <td>${store.storeCode}</td>
                         </tr>`;
                       }).join('')}
                     </tbody>
                   </table>
+                  ${!expanded && itemsSorted.length > itemsLimited.length ? `
+                    <div style="display:flex;justify-content:center;margin-top:8px;">
+                      <button class="big-button" onclick="expandStoreItems('${store.storeCode}')">Show ${itemsSorted.length - itemsLimited.length} more</button>
+                    </div>` : ''}
                 </div>
               </div>`;
           }).join('')}
-        </div>`;
+        </div>
+        ${totalStores > storeLimit ? `
+          <div style="display:flex;justify-content:center;margin-top:8px;">
+            <button class="big-button" onclick="loadMoreStores()">Show more stores (${totalStores - storeLimit})</button>
+          </div>` : ''}
+      `;
+      resultsEl.classList.add('update-flash');
+      setTimeout(()=>resultsEl.classList.remove('update-flash'), 450);
       updateDistributeButtonState();
+      if (typeof syncSidebarToQueue === 'function') syncSidebarToQueue();
+    };
+
+    const loadMoreStores = () => {
+      if (!lastResults?.sortedStores) return;
+      resultsStoreRenderLimit = Math.min(resultsStoreRenderLimit + RESULTS_STORE_CHUNK, lastResults.sortedStores.length);
+      displayResults(lastResults);
+    };
+
+    const expandStoreItems = (storeCode) => {
+      expandedStoreItems[storeCode] = true;
+      if (lastResults) displayResults(lastResults);
     };
 
     // Export functionality
@@ -1204,7 +1637,7 @@
       const storeGroups = {};
       
       itemsToSort.forEach(item => {
-        const store = allStores.find(s => s.code === item.storeCode);
+        const store = getStoreByCode(item.storeCode);
         if (!store) {
           issues.push({type:'not_found', ...item, message:`Store ${item.storeCode} not found`});
           return;
@@ -1238,6 +1671,9 @@
           currentWorkbook = null;
           for (let key in collapsedStores) delete collapsedStores[key];
           for (let key in copiedStores) delete copiedStores[key];
+          for (let key in expandedStoreItems) delete expandedStoreItems[key];
+          importRenderLimit = IMPORT_CHUNK;
+          resultsStoreRenderLimit = RESULTS_STORE_CHUNK;
           const fileInput = $('fileInput');
           const pasteArea = $('pasteArea');
           const fileStatus = $('fileStatus');
@@ -1258,6 +1694,7 @@
           updateImportDisplay();
           updateDistributeButtonState();
           updateStoreCounts();
+          clearAppState();
           setTimeout(() => showStatus('<strong>✅ Reset complete.</strong> Ready for new data.', 'success'), 100);
         } catch (error) {
           alert(`Reset encountered an error: ${error.message}. Please refresh the page.`);
@@ -1300,11 +1737,77 @@
 
     document.addEventListener('DOMContentLoaded', () => {
       initializeDarkMode();
+      loadAppState();
       loadUserPreferences();
       updateStoreStatus();
       updateImportDisplay();
       updateDistributeButtonState();
+      // Back-to-top setup
+      updateBackToTopVisibility();
+      const btt = $('backToTopBtn');
+      if (btt) btt.addEventListener('click', () => window.scrollTo({top:0, behavior:'smooth'}));
+      // Align sidebar card bottom to item queue area
+      setTimeout(syncSidebarToQueue, 0);
+      // Drag & drop file import
+      const ua = $('uploadArea');
+      if (ua) {
+        ua.addEventListener('dragover', e => { e.preventDefault(); ua.classList.add('dragover'); });
+        ua.addEventListener('dragleave', () => ua.classList.remove('dragover'));
+        ua.addEventListener('drop', e => {
+          e.preventDefault(); ua.classList.remove('dragover');
+          const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+          if (f) { $('fileStatus').innerHTML = '📊 Reading file...'; importFile(f); }
+        });
+      }
+      // Keyboard shortcuts
+      document.addEventListener('keydown', (ev) => {
+        const tag = (ev.target && ev.target.tagName || '').toLowerCase();
+        const typing = tag === 'input' || tag === 'textarea' || ev.target.isContentEditable;
+        if (typing) return;
+        if (ev.key === '?') { showHelpOverlay(); ev.preventDefault(); }
+        if (ev.key === 's' || ev.key === 'S') { sortItems(); ev.preventDefault(); }
+        if (ev.key === 'e' || ev.key === 'E') { exportResults(); ev.preventDefault(); }
+        if (ev.key === 'd' || ev.key === 'D') { const b=$('distributeBtn'); if (b && !b.disabled) { distributeAndResort(); } ev.preventDefault(); }
+        if (ev.key === 'm' || ev.key === 'M') { if (typeof assignSelectedIssues === 'function') assignSelectedIssues(); ev.preventDefault(); }
+        if (ev.key === 'a') { toggleAllStores(true); ev.preventDefault(); }
+        if (ev.key === 'A') { toggleAllStores(false); ev.preventDefault(); }
+        if (ev.key === 'f' || ev.key === 'F') { const si=$('storeSearchInput'); if (si){ si.focus(); ev.preventDefault(); } }
+      });
+    });
+
+    const updateBackToTopVisibility = () => {
+      const y = window.scrollY || document.documentElement.scrollTop || 0;
+      const btt = $('backToTopBtn');
+      if (!btt) return;
+      if (y > 250) btt.classList.add('show'); else btt.classList.remove('show');
+    };
+    window.addEventListener('scroll', updateBackToTopVisibility, {passive:true});
+
+    window.addEventListener('beforeunload', saveAppState);
+
+    // Sidebar height alignment to the two-col (Import Queue + Actions) area
+    let _resizeAlignTimer = null;
+    const syncSidebarToQueue = () => {
+      try {
+        if (window.matchMedia('(max-width: 1100px)').matches) {
+          const lc = document.querySelector('.sidebar .card');
+          if (lc) lc.style.height = '';
+          return;
+        }
+        const leftCard = document.querySelector('.sidebar .card');
+        const twoCol = document.querySelector('.two-col');
+        if (!leftCard || !twoCol) return;
+        const leftTop = leftCard.getBoundingClientRect().top;
+        const bottom = twoCol.getBoundingClientRect().bottom;
+        const h = Math.max(200, Math.round(bottom - leftTop));
+        leftCard.style.height = h + 'px';
+      } catch (e) {}
+    };
+    window.addEventListener('resize', () => {
+      clearTimeout(_resizeAlignTimer);
+      _resizeAlignTimer = setTimeout(syncSidebarToQueue, 60);
     });
   </script>
 </body>
 </html>
+

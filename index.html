@@ -239,6 +239,21 @@
     body.dark-mode .collapse-toggle{background:#000;border-color:#333;color:#fce4ec;}
     body.dark-mode .help-content{background:#1a1a1a;color:#fce4ec;}
     body.dark-mode .help-close{color:#ffb6c1;}
+    /* Dev overlay: dark mode adjustments */
+    body.dark-mode #devOverlay .help-content{background:#1a1a1a;color:#fce4ec;}
+    body.dark-mode #devOverlay h2, body.dark-mode #devOverlay h3{color:#ffb6c1;}
+    body.dark-mode #devStoresList{background:#0f0f0f !important; border-color:#333 !important;}
+    body.dark-mode .dev-store-row{background:#1a1a1a !important; border-color:#333 !important;}
+    body.dark-mode #devStoresList label{color:#cccccc !important;}
+    body.dark-mode #devStoresList .remove-btn{background:#111 !important; border-color:#333 !important; color:#f87171 !important;}
+    /* Dark mode: Column Mapping preview */
+    body.dark-mode .colmap-preview{background:#101114 !important; border:1px solid #333 !important;}
+    body.dark-mode .colmap-table{color:#fce4ec;}
+    body.dark-mode .colmap-table tr{border-bottom:1px solid #333 !important;}
+    body.dark-mode .colmap-table td{background:#16181d !important;}
+    body.dark-mode .colmap-table td.colmap-index{background:#1e2026 !important;}
+    body.dark-mode .colmap-heading{color:#ffb6c1;}
+    body.dark-mode .colmap-note{color:#cfcfcf !important;}
     /* Dark mode: improve Sorting Results title legibility */
     body.dark-mode .results-header-band{background:var(--gradient-primary);} 
     body.dark-mode .results-header-title{color:#ffffff;text-shadow:0 1px 2px rgba(0,0,0,.6);} 
@@ -391,9 +406,9 @@
               <p style="margin:5px 0;font-size:12px;color:#888;">✨ Supports store codes OR store names</p>
               <input type="file" id="fileInput" accept=".xlsx,.xlsm,.xls" onchange="handleFileUpload(event)" style="display:none;"/>
               <button class="big-button" onclick="document.getElementById('fileInput').click()">Choose File</button>
-                <label style="display:flex;align-items:center;gap:8px;justify-content:center;margin-top:10px;font-size:12px;color:#555">
-                  <input type="checkbox" id="combineToggle" checked/> Combine duplicate item-store lines on import
-                </label>
+              <label style="display:flex;align-items:center;gap:8px;justify-content:center;margin-top:10px;font-size:12px;color:#555">
+                <input type="checkbox" id="combineToggle" checked/> Combine duplicate item-store lines on import
+              </label>
               <div id="fileStatus" style="font-size:12px;margin-top:10px;"></div>
             </div>
           </div>
@@ -405,9 +420,9 @@
               <p style="font-size:12px;color:#888;">Format: ItemNumber, Quantity, StoreCode/StoreName</p>
             </div>
             <textarea id="pasteArea" placeholder="Example:&#10;NSN-0402-21, 10, 101&#10;NSN-0405-04, 20, NIAGARA 1&#10;NSN-0405-05, 15, MISSISSAUGA" style="width:100%;height:100px;font-size:12px;padding:10px;border:1px solid #ddd;border-radius:6px;font-family:monospace;"></textarea>
-              <label style="display:flex;align-items:center;gap:8px;justify-content:center;margin-top:8px;font-size:12px;color:#555">
-                <input type="checkbox" id="combineToggle2" checked/> Combine duplicate item-store lines on import
-              </label>
+            <label style="display:flex;align-items:center;gap:8px;justify-content:center;margin-top:8px;font-size:12px;color:#555">
+              <input type="checkbox" id="combineToggle2" checked/> Combine duplicate item-store lines on import
+            </label>
             <button class="big-button success" onclick="processPastedData()" style="margin-top:8px;width:100%;">Process Data</button>
           </div>
         </div>
@@ -488,6 +503,44 @@
     </div>
   </div>
 
+  <!-- Dev Overlay (hidden) -->
+  <div id="devOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:10050;align-items:center;justify-content:center;">
+    <div class="help-content" style="max-width:900px; width:min(92vw,900px);">
+      <button onclick="hideDevOverlay()" class="help-close" aria-label="Close">&times;</button>
+      <h2 style="color:var(--pink-1);margin-bottom:12px;">Developer Settings</h2>
+      <div style="font-size:12px;color:#666;margin-bottom:12px;">Adjust app defaults. Changes persist in localStorage.</div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+        <div>
+          <h3 style="color:var(--pink-1);margin-bottom:6px;">Rank Weights</h3>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;align-items:end;">
+            <label style="font-size:12px;">AA<br><input id="devWeightAA" type="number" min="0" step="1" style="width:100%;padding:6px;border:1px solid #ddd;border-radius:6px;"></label>
+            <label style="font-size:12px;">A<br><input id="devWeightA" type="number" min="0" step="1" style="width:100%;padding:6px;border:1px solid #ddd;border-radius:6px;"></label>
+            <label style="font-size:12px;">B<br><input id="devWeightB" type="number" min="0" step="1" style="width:100%;padding:6px;border:1px solid #ddd;border-radius:6px;"></label>
+            <label style="font-size:12px;">C<br><input id="devWeightC" type="number" min="0" step="1" style="width:100%;padding:6px;border:1px solid #ddd;border-radius:6px;"></label>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:8px;">
+            <button class="big-button" onclick="devSaveWeights()">Save Weights</button>
+            <button class="big-button" onclick="devRestoreBuiltinWeights()">Restore Built-in</button>
+          </div>
+        </div>
+
+        <div>
+          <h3 style="color:var(--pink-1);margin-bottom:6px;">Default Stores (List)</h3>
+          <div id="devStoresList" style="display:flex;flex-direction:column;gap:6px;max-height:50vh;overflow:auto;border:1px solid #eee;padding:8px;border-radius:8px;background:#fafafa;"></div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;align-items:center;">
+            <button class="big-button" onclick="devAddDefaultStore()">Add Store</button>
+            <button class="big-button" onclick="devSaveDefaultStores()">Save Defaults</button>
+            <button class="big-button" onclick="devApplyDefaultsToCurrent()">Replace Current Stores</button>
+            <button class="big-button" onclick="devLoadCurrentDefaults()">Reload Editor</button>
+            <button class="big-button" onclick="devClearSettings()">Reset Dev Settings</button>
+          </div>
+          <div style="font-size:11px;color:#777;margin-top:6px;">Each row requires code, name, rank (AA/A/B/C), and active.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div id="copyToast" class="toast">Copied!</div>
   <div id="actionToast" class="toast" style="left:50%;transform:translate(-50%,10px);right:auto;bottom:24px;">Action done. <button id="undoBtn" class="copy-btn" style="margin-left:8px;">Undo</button></div>
   <div id="ariaStatus" class="sr-only" aria-live="polite"></div>
@@ -512,7 +565,9 @@
     const $$$ = sel => document.querySelectorAll(sel);
     
     // Constants
-    const RANK_WEIGHTS = { AA: 4, A: 3, B: 2, C: 1 };
+    const DEV_SETTINGS_KEY = 'allocationBuddyDevSettingsV1';
+    const BUILTIN_RANK_WEIGHTS = { AA: 4, A: 3, B: 2, C: 1 };
+    let RANK_WEIGHTS = { ...BUILTIN_RANK_WEIGHTS };
     const COOKIE_NAME = 'allocationBuddyPrefs';
     const COOKIE_DAYS = 365;
     const APP_STATE_KEY = 'allocationBuddyStateV1';
@@ -554,7 +609,22 @@
       {code:'135',name:'THUNDER BAY',rank:'A',active:true},
       {code:'199',name:'STAG WEB',rank:'AA',active:true}
     ]);
-    const cloneDefaults = () => DEFAULT_STORES.map(s => ({...s}));
+
+    // Dev settings loader/saver
+    const loadDevSettings = () => {
+      try { const raw = localStorage.getItem(DEV_SETTINGS_KEY); return raw ? JSON.parse(raw) : {}; } catch (_) { return {}; }
+    };
+    const saveDevSettings = (settings) => {
+      try { localStorage.setItem(DEV_SETTINGS_KEY, JSON.stringify(settings || {})); } catch (_) {}
+    };
+
+    // Determine current default stores (dev override if present)
+    const getCurrentDefaultStores = () => {
+      const dev = loadDevSettings();
+      const ds = dev && Array.isArray(dev.defaultStores) ? dev.defaultStores : null;
+      return (ds && ds.length ? ds : DEFAULT_STORES);
+    };
+    const cloneDefaults = () => getCurrentDefaultStores().map(s => ({...s}));
 
     // State
     let itemsToSort = [];
@@ -563,6 +633,7 @@
     let currentWorkbook = null;
     const collapsedStores = {};
     const copiedStores = {};
+    const manualAssignSelections = {}; // remember Assign-To dropdown choices
     let allStores = cloneDefaults(); // start from defaults
     let appStateLoaded = false;
 
@@ -573,9 +644,6 @@
     let importRenderLimit = IMPORT_CHUNK;
     let resultsStoreRenderLimit = RESULTS_STORE_CHUNK;
     const expandedStoreItems = {}; // storeCode -> true when expanded
-    // Remember user's manual dropdown selections by unique key
-    // Key format: `${itemNumber}|${fromStoreCode}|${quantity}` → target store code
-    const manualSelections = {};
 
     // Fast store lookups (O(1) by code or exact name)
     const storeIndex = {
@@ -626,6 +694,7 @@
           itemsToSort,
           lastResults,
           redistributionDeltas,
+          manualAssignSelections,
           collapsedStores,
           copiedStores
         };
@@ -650,6 +719,9 @@
         if (Array.isArray(state.itemsToSort)) itemsToSort = state.itemsToSort.map(x => ({...x}));
         lastResults = state.lastResults || null;
         redistributionDeltas = state.redistributionDeltas || {};
+        if (state.manualAssignSelections && typeof state.manualAssignSelections === 'object') {
+          Object.assign(manualAssignSelections, state.manualAssignSelections);
+        }
 
         // Merge into existing objects
         if (state.collapsedStores && typeof state.collapsedStores === 'object') Object.assign(collapsedStores, state.collapsedStores);
@@ -764,6 +836,163 @@
       $('helpOverlay').style.display = 'none';
       document.body.style.overflow = 'auto';
     };
+
+    // ---------- Dev Overlay (hidden trigger in Help) ----------
+    const openDevFromHelp = (e) => { try { if (typeof showDevOverlay === 'function') showDevOverlay(); } catch(_){} };
+
+    const devStoreRowHTML = (idx, s = {code:'', name:'', rank:'B', active:true}) => {
+      const id = (p) => `devStore_${p}_${idx}`;
+      const esc = (v) => String(v ?? '').replace(/"/g,'&quot;');
+      return `
+        <div class="dev-store-row" data-index="${idx}" style="display:grid;grid-template-columns:90px 1fr 90px 80px 32px;gap:6px;align-items:center;background:#fff;border:1px solid #e5e7eb;padding:6px;border-radius:6px;">
+          <input id="${id('code')}" placeholder="Code" value="${esc(s.code)}" style="padding:6px;border:1px solid #ddd;border-radius:6px;" />
+          <input id="${id('name')}" placeholder="Name" value="${esc(s.name)}" style="padding:6px;border:1px solid #ddd;border-radius:6px;" />
+          <select id="${id('rank')}" style="padding:6px;border:1px solid #ddd;border-radius:6px;">
+            ${['AA','A','B','C'].map(r => `<option value="${r}" ${String(s.rank).toUpperCase()===r?'selected':''}>${r}</option>`).join('')}
+          </select>
+          <label style="display:flex;align-items:center;gap:6px;justify-content:center;font-size:12px;color:#555;">
+            <input id="${id('active')}" type="checkbox" ${s.active ? 'checked' : ''}/> Active
+          </label>
+          <button class="remove-btn" title="Remove" aria-label="Remove store" onclick="devRemoveDefaultStore(${idx})" style="background:#fff;border:1px solid #ddd;border-radius:6px;cursor:pointer;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-size:18px;line-height:1;color:#ef4444;">&times;</button>
+        </div>`;
+    };
+    const devRenderStoresList = (stores) => {
+      const root = $('devStoresList');
+      if (!root) return;
+      const arr = Array.isArray(stores) ? stores : [];
+      root.innerHTML = arr.map((s,i) => devStoreRowHTML(i,s)).join('');
+    };
+    const devLoadCurrentDefaults = () => {
+      try {
+        const ds = getCurrentDefaultStores();
+        devRenderStoresList(ds);
+        // Fill weights
+        if ($('devWeightAA')) $('devWeightAA').value = Number(RANK_WEIGHTS.AA ?? 0);
+        if ($('devWeightA'))  $('devWeightA').value  = Number(RANK_WEIGHTS.A  ?? 0);
+        if ($('devWeightB'))  $('devWeightB').value  = Number(RANK_WEIGHTS.B  ?? 0);
+        if ($('devWeightC'))  $('devWeightC').value  = Number(RANK_WEIGHTS.C  ?? 0);
+      } catch (_) {}
+    };
+    const devAddDefaultStore = () => {
+      const root = $('devStoresList');
+      if (!root) return;
+      const idx = root.querySelectorAll('.dev-store-row').length;
+      const wrapper = document.createElement('div');
+      wrapper.innerHTML = devStoreRowHTML(idx);
+      // Append child of wrapper (the row div)
+      while (wrapper.firstChild) root.appendChild(wrapper.firstChild);
+      root.scrollTop = root.scrollHeight;
+    };
+    const devRemoveDefaultStore = (idx) => {
+      try {
+        const current = devCollectStoresFromList();
+        if (idx >= 0 && idx < current.length) current.splice(idx, 1);
+        devRenderStoresList(current);
+      } catch (_) {}
+    };
+
+    const showDevOverlay = () => {
+      const el = $('devOverlay');
+      if (!el) return;
+      el.style.display = 'flex';
+      document.body.style.overflow = 'hidden';
+      devLoadCurrentDefaults();
+    };
+    const hideDevOverlay = () => {
+      const el = $('devOverlay');
+      if (!el) return;
+      el.style.display = 'none';
+      document.body.style.overflow = 'auto';
+    };
+
+    const devSaveWeights = () => {
+      const aa = parseInt($('devWeightAA').value) || 0;
+      const a  = parseInt($('devWeightA').value)  || 0;
+      const b  = parseInt($('devWeightB').value)  || 0;
+      const c  = parseInt($('devWeightC').value)  || 0;
+      const nw = { AA: aa, A: a, B: b, C: c };
+      RANK_WEIGHTS = { ...RANK_WEIGHTS, ...nw };
+      const dev = loadDevSettings();
+      dev.rankWeights = nw;
+      saveDevSettings(dev);
+      showStatus('<strong>Success:</strong> Rank weights saved.', 'success');
+    };
+    const devRestoreBuiltinWeights = () => {
+      RANK_WEIGHTS = { ...BUILTIN_RANK_WEIGHTS };
+      const dev = loadDevSettings();
+      if (dev.rankWeights) delete dev.rankWeights;
+      saveDevSettings(dev);
+      devLoadCurrentDefaults();
+      showStatus('<strong>Success:</strong> Restored built-in weights.', 'success');
+    };
+
+    const validateStoreObj = (s) => {
+      if (!s) return false;
+      const hasProps = (p) => Object.prototype.hasOwnProperty.call(s, p);
+      return hasProps('code') && hasProps('name') && hasProps('rank') && hasProps('active');
+    };
+    const devCollectStoresFromList = () => {
+      const rows = Array.from(document.querySelectorAll('#devStoresList .dev-store-row'));
+      return rows.map((row,i) => {
+        const val = (sel) => (row.querySelector(sel)?.value ?? '').trim();
+        const chk = (sel) => !!row.querySelector(sel)?.checked;
+        const code = val('input[id^="devStore_code_"]');
+        const name = val('input[id^="devStore_name_"]');
+        const rank = val('select[id^="devStore_rank_"]') || 'B';
+        const active = chk('input[id^="devStore_active_"]');
+        return { code, name: name.toUpperCase(), rank: rank.toUpperCase(), active };
+      }).filter(s => s.code || s.name);
+    };
+    const devSaveDefaultStores = () => {
+      try {
+        const cleaned = devCollectStoresFromList();
+        if (!Array.isArray(cleaned) || cleaned.length === 0) { alert('Add at least one store to save.'); return; }
+        if (!cleaned.every(validateStoreObj)) { alert('Each store must have code, name, rank, active.'); return; }
+        const dev = loadDevSettings();
+        dev.defaultStores = cleaned;
+        saveDevSettings(dev);
+        showStatus('<strong>Success:</strong> Default stores saved.', 'success');
+      } catch (e) {
+        alert('Failed to save: ' + e.message);
+      }
+    };
+    const devApplyDefaultsToCurrent = () => {
+      try {
+        allStores = cloneDefaults();
+        rebuildStoreIndex();
+        updateStoreStatus();
+        updateDistributeButtonState();
+        saveUserPreferences();
+        saveAppState();
+        showStatus('<strong>Success:</strong> Replaced current stores from defaults.', 'success');
+      } catch (e) { alert('Failed to apply defaults: ' + e.message); }
+    };
+    const devClearSettings = () => {
+      if (!confirm('Clear all dev settings and restore built-ins?')) return;
+      try {
+        localStorage.removeItem(DEV_SETTINGS_KEY);
+      } catch {}
+      RANK_WEIGHTS = { ...BUILTIN_RANK_WEIGHTS };
+      devLoadCurrentDefaults();
+      showStatus('<strong>Success:</strong> Dev settings cleared.', 'success');
+    };
+
+    // Apply saved dev weights on load
+    (function applyDevOnLoad(){
+      try {
+        const dev = loadDevSettings();
+        if (dev && dev.rankWeights) {
+          const w = dev.rankWeights;
+          const nw = {
+            AA: Number(w.AA) || BUILTIN_RANK_WEIGHTS.AA,
+            A:  Number(w.A)  || BUILTIN_RANK_WEIGHTS.A,
+            B:  Number(w.B)  || BUILTIN_RANK_WEIGHTS.B,
+            C:  Number(w.C)  || BUILTIN_RANK_WEIGHTS.C,
+          };
+          RANK_WEIGHTS = { ...nw };
+        }
+      } catch(_){}
+    })();
 
     // Tab management
     const switchTab = (section, tabName, save = true) => {
@@ -1047,15 +1276,16 @@
       
       const previewRows = rows.slice(0, 5);
       $('fileStatus').innerHTML = `
-        <div style="margin: 10px 0;">
-          <h4>Column Mapping for "${sheetName}"</h4>
-          <div style="background: #f5f5f5; padding: 8px; border-radius: 4px; margin: 8px 0; max-height: 150px; overflow: auto;">
-            <table style="width: 100%; font-size: 11px; border-collapse: collapse;">
+        <div class="colmap-wrapper" style="margin: 10px 0;">
+          <h4 class="colmap-heading">Column Mapping for "${sheetName}"</h4>
+          <input type="hidden" id="selectedSheetForImport" value="${sheetName}" />
+          <div class="colmap-preview" style="background: #f5f5f5; padding: 8px; border-radius: 4px; margin: 8px 0; max-height: 150px; overflow: auto;">
+            <table class="colmap-table" style="width: 100%; font-size: 11px; border-collapse: collapse;">
               ${previewRows.map((row, idx) => `
-                <tr style="border-bottom: 1px solid #ddd;">
-                  <td style="padding: 2px 4px; font-weight: bold; background: #eee;">${idx + 1}</td>
+                <tr class="colmap-row" style="border-bottom: 1px solid #ddd;">
+                  <td class="colmap-index" style="padding: 2px 4px; font-weight: bold; background: #eee;">${idx + 1}</td>
                   ${row.slice(0, 10).map((cell, colIdx) => `
-                    <td style="padding: 2px 4px;" title="Column ${String.fromCharCode(65 + colIdx)}: ${String(cell)}">${String(cell).substring(0, 15)}</td>
+                    <td class="colmap-cell" style="padding: 2px 4px;" title="Column ${String.fromCharCode(65 + colIdx)}: ${String(cell)}">${String(cell).substring(0, 15)}</td>
                   `).join('')}
                 </tr>
               `).join('')}
@@ -1068,7 +1298,7 @@
                 <select id="${['item', 'qty', 'store'][i]}ColSelect" style="width: 100%; padding: 4px;">
                   ${rows[0].map((_, idx) => `<option value="${idx}" ${idx === i ? 'selected' : ''}>Column ${String.fromCharCode(65 + idx)} (${String(rows[0][idx]).substring(0, 10)})</option>`).join('')}
                 </select>
-                ${i === 2 ? '<div style="font-size: 10px; color: #666; margin-top: 2px;">Accepts store codes or names</div>' : ''}
+                ${i === 2 ? '<div class="colmap-note" style="font-size: 10px; color: #666; margin-top: 2px;">Accepts store codes or names</div>' : ''}
               </div>
             `).join('')}
           </div>
@@ -1087,7 +1317,9 @@
         storeCol: parseInt($('storeColSelect').value),
         headerRow: parseInt($('headerRowInput').value) - 1
       };
-      importFromSheet($('sheetSelector').value, columnMapping);
+      const sheetName = ($('sheetSelector')?.value || $('selectedSheetForImport')?.value);
+      if (!sheetName) { alert('Please select a sheet first.'); return; }
+      importFromSheet(sheetName, columnMapping);
     };
 
     const processPastedData = () => {
@@ -1249,11 +1481,70 @@
     // Distribution and sorting
     const rankWeight = rank => RANK_WEIGHTS[String(rank).toUpperCase()] || 1;
 
+    // Respect manual selections: collect chosen target stores and problem-item keys
+    const getSelectedManualAssignmentTargets = () => {
+      try {
+        const selects = Array.from(document.querySelectorAll('.assign-select'));
+        const chosenFromDOM = selects
+          .map(s => (s && typeof s.value === 'string') ? s.value.trim() : '')
+          .filter(v => !!v);
+        const chosenFromMemory = Object.values(manualAssignSelections || {}).filter(Boolean);
+        return new Set([...chosenFromDOM, ...chosenFromMemory]);
+      } catch (_) {
+        return new Set();
+      }
+    };
+
+    const getSelectedManualProblemKeys = () => {
+      try {
+        const selects = Array.from(document.querySelectorAll('.assign-select'));
+        const keysFromDOM = selects
+          .filter(s => s && s.value && s.getAttribute('data-item') && s.getAttribute('data-store'))
+          .map(s => `${s.getAttribute('data-item')}|${s.getAttribute('data-store')}`);
+        const keysFromMemory = Object.keys(manualAssignSelections || {}).filter(k => !!manualAssignSelections[k]);
+        return new Set([...keysFromDOM, ...keysFromMemory]);
+      } catch (_) {
+        return new Set();
+      }
+    };
+
+    // Apply saved selections to Assign-To dropdowns and keep them updated
+    const applySavedAssignSelections = () => {
+      try {
+        const selects = document.querySelectorAll('.assign-select');
+        selects.forEach(sel => {
+          const item = sel.getAttribute('data-item');
+          const from = sel.getAttribute('data-store');
+          const key = `${item}|${from}`;
+          const saved = manualAssignSelections[key];
+          if (saved) {
+            sel.value = saved;
+          }
+        });
+      } catch (_) { /* noop */ }
+    };
+    const attachAssignSelectHandlers = () => {
+      try {
+        const selects = document.querySelectorAll('.assign-select');
+        selects.forEach(sel => {
+          sel.onchange = e => {
+            const v = (e.target && typeof e.target.value === 'string') ? e.target.value.trim() : '';
+            const item = sel.getAttribute('data-item');
+            const from = sel.getAttribute('data-store');
+            const key = `${item}|${from}`;
+            if (v) manualAssignSelections[key] = v; else delete manualAssignSelections[key];
+            saveAppState();
+          };
+        });
+      } catch (_) { /* noop */ }
+    };
+
     const getActiveTargetsInCurrentResults = () => {
       if (!lastResults?.sortedStores) return [];
       const resultCodes = new Set(lastResults.sortedStores.map(s => s.storeCode));
+      const reservedTargets = getSelectedManualAssignmentTargets();
       return allStores
-        .filter(s => s.active && resultCodes.has(s.code))
+        .filter(s => s.active && resultCodes.has(s.code) && !reservedTargets.has(s.code))
         .sort((a,b) => {
           const w = rankWeight(b.rank) - rankWeight(a.rank);
           return w !== 0 ? w : ((a._codeNum||999999) - (b._codeNum||999999));
@@ -1279,7 +1570,7 @@
           return w !== 0 ? w : (an - bn);
         });
     };
-    const buildStoreOptionsHTML = (excludeCode = null, selectedCode = null) => {
+    const buildStoreOptionsHTML = (excludeCode = null) => {
       // Sort Assign-To dropdown by store code (ascending)
       const active = allStores
         .filter(s => s.active)
@@ -1287,12 +1578,7 @@
         .sort((a,b) => (a._codeNum ?? getCodeNumFromObj(a)) - (b._codeNum ?? getCodeNumFromObj(b)));
       if (!active.length) return '<option value="">No active stores</option>';
       const rows = ['<option value="">Select store…</option>'];
-      active.forEach(s => {
-        if (!excludeCode || s.code !== excludeCode) {
-          const selAttr = (selectedCode && s.code === selectedCode) ? ' selected' : '';
-          rows.push(`<option value="${s.code}"${selAttr}>${s.code} - ${s.name} (${s.rank})</option>`);
-        }
-      });
+      active.forEach(s => { if (!excludeCode || s.code !== excludeCode) rows.push(`<option value="${s.code}">${s.code} - ${s.name} (${s.rank})</option>`); });
       return rows.join('');
     };
 
@@ -1328,6 +1614,9 @@
         pendingDeltas[key] = (pendingDeltas[key] || 0) + qty;
         movedLines += 1;
         movedQty += qty;
+        // Clear saved selection for this processed problem row
+        const manualKey = `${itemNumber}|${fromCode}`;
+        if (manualAssignSelections[manualKey]) delete manualAssignSelections[manualKey];
       });
 
       if (movedLines === 0) {
@@ -1372,34 +1661,26 @@
         const manual = typeof v === 'number' ? 0 : (v?.manual || 0);
         if (manual > 0) redistributionDeltas[k] = {auto:0, manual};
       });
-        // Skip any pre-selected manual assignments before auto distribution
-        const skipKeys = new Set();
-        let skippedSelected = 0;
-        try {
-          const manualSelects = Array.from(document.querySelectorAll('.assign-select'));
-          manualSelects.forEach(sel => {
-            const target = sel && sel.value;
-            if (!target) return;
-            const itemNumber = sel.getAttribute('data-item');
-            const fromCode = sel.getAttribute('data-store');
-            const qty = parseInt(sel.getAttribute('data-qty')) || 0;
-            const key = `${itemNumber}|${fromCode}|${qty}`;
-            // Remember selection so it persists after re-render
-            manualSelections[key] = target;
-            skipKeys.add(key);
-            skippedSelected++;
-          });
-        } catch {}
       const redistributedItems = [];
       const problemAssignments = [];
       const keep = [];
+      // Items with a manual destination selected should be ignored by auto-redistribute
+      const manualReservedKeys = getSelectedManualProblemKeys();
 
-        itemsToSort.forEach(it => {
-          const s = getStoreByCode(it.storeCode);
-          const key = `${it.itemNumber}|${it.storeCode}|${it.quantity}`;
-          if (skipKeys.has(key)) { keep.push(it); return; }
-          if (!s || !s.active) problemAssignments.push(it); else keep.push(it);
-        });
+      itemsToSort.forEach(it => {
+        const s = getStoreByCode(it.storeCode);
+        const isProblem = (!s || !s.active);
+        if (isProblem) {
+          const manualKey = `${it.itemNumber}|${it.storeCode}`;
+          if (manualReservedKeys.has(manualKey)) {
+            keep.push(it);
+          } else {
+            problemAssignments.push(it);
+          }
+        } else {
+          keep.push(it);
+        }
+      });
 
       if (problemAssignments.length === 0) {
         showStatus('<strong>ℹ️ Nothing to distribute.</strong> No items are assigned to inactive or unknown stores.', 'info');
@@ -1618,10 +1899,7 @@
                       <td style="color:${issue.type === 'not_found' ? 'var(--danger)' : 'var(--warning)'};">${issue.message}</td>
                       <td>
                         <select class="assign-select" data-item="${issue.itemNumber}" data-store="${issue.storeCode}" data-qty="${issue.quantity}" style="min-width:220px;">
-                          ${buildStoreOptionsHTML(
-                            issue.storeCode,
-                            manualSelections[`${issue.itemNumber}|${issue.storeCode}|${issue.quantity}`] || null
-                          )}
+                          ${buildStoreOptionsHTML(issue.storeCode)}
                         </select>
                       </td>
                     </tr>`).join('')}
@@ -1637,6 +1915,9 @@
               </button>
             </div>
           </div>`;
+        // Re-apply saved Assign-To dropdown selections and attach change handlers
+        applySavedAssignSelections();
+        attachAssignSelectHandlers();
         issuesEl.classList.add('update-flash');
         setTimeout(()=>issuesEl.classList.remove('update-flash'), 450);
       } else {
@@ -1819,6 +2100,7 @@
           currentWorkbook = null;
           for (let key in collapsedStores) delete collapsedStores[key];
           for (let key in copiedStores) delete copiedStores[key];
+          for (let key in manualAssignSelections) delete manualAssignSelections[key];
           for (let key in expandedStoreItems) delete expandedStoreItems[key];
           importRenderLimit = IMPORT_CHUNK;
           resultsStoreRenderLimit = RESULTS_STORE_CHUNK;
@@ -1880,7 +2162,10 @@
     };
 
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && $('helpOverlay').style.display === 'flex') hideHelpOverlay();
+      if (e.key === 'Escape') {
+        if ($('helpOverlay').style.display === 'flex') hideHelpOverlay();
+        if ($('devOverlay') && $('devOverlay').style.display === 'flex') hideDevOverlay();
+      }
     });
 
     document.addEventListener('DOMContentLoaded', () => {
@@ -1890,18 +2175,6 @@
       updateStoreStatus();
       updateImportDisplay();
       updateDistributeButtonState();
-      // Persist selections from manual Assign-To dropdowns as the user changes them
-      document.addEventListener('change', (e) => {
-        const t = e.target;
-        if (t && t.classList && t.classList.contains('assign-select')) {
-          const item = t.getAttribute('data-item');
-          const from = t.getAttribute('data-store');
-          const qty = parseInt(t.getAttribute('data-qty')) || 0;
-          const key = `${item}|${from}|${qty}`;
-          const val = t.value || null;
-          if (val) manualSelections[key] = val; else delete manualSelections[key];
-        }
-      });
       // Back-to-top setup
       updateBackToTopVisibility();
       const btt = $('backToTopBtn');
@@ -1925,6 +2198,11 @@
         const typing = tag === 'input' || tag === 'textarea' || ev.target.isContentEditable;
         if (typing) return;
         if (ev.key === '?') { showHelpOverlay(); ev.preventDefault(); }
+        // While Help is open, Ctrl+Alt+D opens Dev overlay
+        if ((ev.ctrlKey && ev.altKey && (ev.key === 'd' || ev.key === 'D')) && $('helpOverlay').style.display === 'flex') {
+          openDevFromHelp();
+          ev.preventDefault();
+        }
         if (ev.key === 's' || ev.key === 'S') { sortItems(); ev.preventDefault(); }
         if (ev.key === 'e' || ev.key === 'E') { exportResults(); ev.preventDefault(); }
         if (ev.key === 'd' || ev.key === 'D') { const b=$('distributeBtn'); if (b && !b.disabled) { distributeAndResort(); } ev.preventDefault(); }
@@ -1933,6 +2211,13 @@
         if (ev.key === 'A') { toggleAllStores(false); ev.preventDefault(); }
         if (ev.key === 'f' || ev.key === 'F') { const si=$('storeSearchInput'); if (si){ si.focus(); ev.preventDefault(); } }
       });
+      // Hidden triggers inside Help
+      try {
+        const helpTitle = document.querySelector('#helpOverlay h2');
+        if (helpTitle) helpTitle.addEventListener('dblclick', openDevFromHelp);
+        const t = $('devHiddenTrigger');
+        if (t) t.addEventListener('click', openDevFromHelp);
+      } catch {}
     });
 
     const updateBackToTopVisibility = () => {

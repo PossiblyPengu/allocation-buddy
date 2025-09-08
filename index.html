@@ -391,9 +391,9 @@
               <p style="margin:5px 0;font-size:12px;color:#888;">✨ Supports store codes OR store names</p>
               <input type="file" id="fileInput" accept=".xlsx,.xlsm,.xls" onchange="handleFileUpload(event)" style="display:none;"/>
               <button class="big-button" onclick="document.getElementById('fileInput').click()">Choose File</button>
-              <label style="display:flex;align-items:center;gap:8px;justify-content:center;margin-top:10px;font-size:12px;color:#555">
-                <input type="checkbox" id="combineToggle"/> Combine duplicate item-store lines on import
-              </label>
+                <label style="display:flex;align-items:center;gap:8px;justify-content:center;margin-top:10px;font-size:12px;color:#555">
+                  <input type="checkbox" id="combineToggle" checked/> Combine duplicate item-store lines on import
+                </label>
               <div id="fileStatus" style="font-size:12px;margin-top:10px;"></div>
             </div>
           </div>
@@ -405,9 +405,9 @@
               <p style="font-size:12px;color:#888;">Format: ItemNumber, Quantity, StoreCode/StoreName</p>
             </div>
             <textarea id="pasteArea" placeholder="Example:&#10;NSN-0402-21, 10, 101&#10;NSN-0405-04, 20, NIAGARA 1&#10;NSN-0405-05, 15, MISSISSAUGA" style="width:100%;height:100px;font-size:12px;padding:10px;border:1px solid #ddd;border-radius:6px;font-family:monospace;"></textarea>
-            <label style="display:flex;align-items:center;gap:8px;justify-content:center;margin-top:8px;font-size:12px;color:#555">
-              <input type="checkbox" id="combineToggle2"/> Combine duplicate item-store lines on import
-            </label>
+              <label style="display:flex;align-items:center;gap:8px;justify-content:center;margin-top:8px;font-size:12px;color:#555">
+                <input type="checkbox" id="combineToggle2" checked/> Combine duplicate item-store lines on import
+              </label>
             <button class="big-button success" onclick="processPastedData()" style="margin-top:8px;width:100%;">Process Data</button>
           </div>
         </div>
@@ -573,6 +573,9 @@
     let importRenderLimit = IMPORT_CHUNK;
     let resultsStoreRenderLimit = RESULTS_STORE_CHUNK;
     const expandedStoreItems = {}; // storeCode -> true when expanded
+    // Remember user's manual dropdown selections by unique key
+    // Key format: `${itemNumber}|${fromStoreCode}|${quantity}` → target store code
+    const manualSelections = {};
 
     // Fast store lookups (O(1) by code or exact name)
     const storeIndex = {
@@ -1276,7 +1279,7 @@
           return w !== 0 ? w : (an - bn);
         });
     };
-    const buildStoreOptionsHTML = (excludeCode = null) => {
+    const buildStoreOptionsHTML = (excludeCode = null, selectedCode = null) => {
       // Sort Assign-To dropdown by store code (ascending)
       const active = allStores
         .filter(s => s.active)
@@ -1284,7 +1287,12 @@
         .sort((a,b) => (a._codeNum ?? getCodeNumFromObj(a)) - (b._codeNum ?? getCodeNumFromObj(b)));
       if (!active.length) return '<option value="">No active stores</option>';
       const rows = ['<option value="">Select store…</option>'];
-      active.forEach(s => { if (!excludeCode || s.code !== excludeCode) rows.push(`<option value="${s.code}">${s.code} - ${s.name} (${s.rank})</option>`); });
+      active.forEach(s => {
+        if (!excludeCode || s.code !== excludeCode) {
+          const selAttr = (selectedCode && s.code === selectedCode) ? ' selected' : '';
+          rows.push(`<option value="${s.code}"${selAttr}>${s.code} - ${s.name} (${s.rank})</option>`);
+        }
+      });
       return rows.join('');
     };
 
@@ -1364,14 +1372,34 @@
         const manual = typeof v === 'number' ? 0 : (v?.manual || 0);
         if (manual > 0) redistributionDeltas[k] = {auto:0, manual};
       });
+        // Skip any pre-selected manual assignments before auto distribution
+        const skipKeys = new Set();
+        let skippedSelected = 0;
+        try {
+          const manualSelects = Array.from(document.querySelectorAll('.assign-select'));
+          manualSelects.forEach(sel => {
+            const target = sel && sel.value;
+            if (!target) return;
+            const itemNumber = sel.getAttribute('data-item');
+            const fromCode = sel.getAttribute('data-store');
+            const qty = parseInt(sel.getAttribute('data-qty')) || 0;
+            const key = `${itemNumber}|${fromCode}|${qty}`;
+            // Remember selection so it persists after re-render
+            manualSelections[key] = target;
+            skipKeys.add(key);
+            skippedSelected++;
+          });
+        } catch {}
       const redistributedItems = [];
       const problemAssignments = [];
       const keep = [];
 
-      itemsToSort.forEach(it => {
-        const s = getStoreByCode(it.storeCode);
-        if (!s || !s.active) problemAssignments.push(it); else keep.push(it);
-      });
+        itemsToSort.forEach(it => {
+          const s = getStoreByCode(it.storeCode);
+          const key = `${it.itemNumber}|${it.storeCode}|${it.quantity}`;
+          if (skipKeys.has(key)) { keep.push(it); return; }
+          if (!s || !s.active) problemAssignments.push(it); else keep.push(it);
+        });
 
       if (problemAssignments.length === 0) {
         showStatus('<strong>ℹ️ Nothing to distribute.</strong> No items are assigned to inactive or unknown stores.', 'info');
@@ -1590,7 +1618,10 @@
                       <td style="color:${issue.type === 'not_found' ? 'var(--danger)' : 'var(--warning)'};">${issue.message}</td>
                       <td>
                         <select class="assign-select" data-item="${issue.itemNumber}" data-store="${issue.storeCode}" data-qty="${issue.quantity}" style="min-width:220px;">
-                          ${buildStoreOptionsHTML(issue.storeCode)}
+                          ${buildStoreOptionsHTML(
+                            issue.storeCode,
+                            manualSelections[`${issue.itemNumber}|${issue.storeCode}|${issue.quantity}`] || null
+                          )}
                         </select>
                       </td>
                     </tr>`).join('')}
@@ -1859,6 +1890,18 @@
       updateStoreStatus();
       updateImportDisplay();
       updateDistributeButtonState();
+      // Persist selections from manual Assign-To dropdowns as the user changes them
+      document.addEventListener('change', (e) => {
+        const t = e.target;
+        if (t && t.classList && t.classList.contains('assign-select')) {
+          const item = t.getAttribute('data-item');
+          const from = t.getAttribute('data-store');
+          const qty = parseInt(t.getAttribute('data-qty')) || 0;
+          const key = `${item}|${from}|${qty}`;
+          const val = t.value || null;
+          if (val) manualSelections[key] = val; else delete manualSelections[key];
+        }
+      });
       // Back-to-top setup
       updateBackToTopVisibility();
       const btt = $('backToTopBtn');

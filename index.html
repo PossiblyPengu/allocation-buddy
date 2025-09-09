@@ -1175,30 +1175,111 @@
         if (!columnMapping) {
           // Try saved mapping first
           const savedMap = getSavedMappingForSheet(sheetName);
-          if (savedMap) { ({itemCol, qtyCol, storeCol, headerRow} = savedMap); debugOutput += `<div style="font-size:11px;color:#888;margin-top:6px;">Used saved column mapping for "${sheetName}"</div>`; }
-          for (let i = 0; i < Math.min(5, rows.length); i++) {
-            const row = rows[i];
-            const itemPatterns = /(item|style|item\s*no|item\s*number)/i;
-            const qtyPatterns = /(qty|quantity|allocations)/i;
-            
-            let foundItem = false, foundQty = false, foundStore = false;
-            
-            row.forEach((cell, idx) => {
-              const cellStr = String(cell).toLowerCase().trim();
-              if (itemPatterns.test(cellStr) && !foundItem) { itemCol = idx; foundItem = true; }
-              if (qtyPatterns.test(cellStr) && !foundQty)  { qtyCol  = idx; foundQty  = true; }
-              if (!foundStore) {
-                if (/^\d{3}$/.test(cellStr)) { storeCol = idx; foundStore = true; }
-                else if (/(store|location|dest|code)/i.test(cellStr)) { storeCol = idx; foundStore = true; }
+          if (savedMap) { 
+            ({itemCol, qtyCol, storeCol, headerRow} = savedMap); 
+            debugOutput += `<div style="font-size:11px;color:#888;margin-top:6px;">Used saved column mapping for "${sheetName}"</div>`; 
+          } else {
+            // Auto-detect columns
+            for (let i = 0; i < Math.min(5, rows.length); i++) {
+              const row = rows[i];
+              const itemPatterns = /(item|style|item\s*no|item\s*number|sku|product)/i;
+              const qtyPatterns = /(qty|quantity|allocations|amount|units|order)/i;
+              const storePatterns = /(store|location|dest|code|shop)/i;
+              
+              let foundItem = false, foundQty = false, foundStore = false;
+              let tempItemCol = -1, tempQtyCol = -1, tempStoreCol = -1;
+              
+              row.forEach((cell, idx) => {
+                const cellStr = String(cell).toLowerCase().trim();
+                
+                // Look for item column
+                if (itemPatterns.test(cellStr) && !foundItem) { 
+                  tempItemCol = idx; 
+                  foundItem = true; 
+                }
+                // Look for quantity column
+                else if (qtyPatterns.test(cellStr) && !foundQty) { 
+                  tempQtyCol = idx; 
+                  foundQty = true; 
+                }
+                // Look for store column (either 3-digit code or store-related header)
+                else if (!foundStore) {
+                  if (/^\d{3}$/.test(cellStr)) { 
+                    tempStoreCol = idx; 
+                    foundStore = true; 
+                  } else if (storePatterns.test(cellStr)) { 
+                    tempStoreCol = idx; 
+                    foundStore = true; 
+                  }
+                }
+              });
+              
+              // If we found headers, set the columns and header row
+              if (foundItem || foundQty || foundStore) { 
+                if (foundItem) itemCol = tempItemCol;
+                if (foundQty) qtyCol = tempQtyCol;
+                if (foundStore) storeCol = tempStoreCol;
+                headerRow = i; 
+                break; 
               }
-            });
+            }
             
-            if (foundItem || foundQty) { headerRow = i; break; }
-            if (foundStore && !foundItem && !foundQty && i === 0) { headerRow = -1; break; }
-          }
-          
-          if (headerRow === -1 && rows.length > 0) {
-            rows[0].forEach((cell, idx) => { if (/^\d{3}$/.test(String(cell).trim())) storeCol = idx; });
+            // Fallback: if no headers found, analyze data patterns to distinguish columns
+            if (headerRow === -1 && rows.length > 1) {
+              const sampleRows = rows.slice(0, Math.min(10, rows.length));
+              const columnStats = [];
+              
+              // Analyze each column's data patterns
+              for (let colIdx = 0; colIdx < Math.max(...sampleRows.map(r => r.length)); colIdx++) {
+                const values = sampleRows.map(r => r[colIdx]).filter(v => v != null && v !== '');
+                if (values.length === 0) continue;
+                
+                const stats = {
+                  colIdx,
+                  hasLetters: values.some(v => /[a-zA-Z]/.test(String(v))),
+                  hasNumbers: values.some(v => /\d/.test(String(v))),
+                  allNumbers: values.every(v => !isNaN(Number(v)) && String(v).trim() !== ''),
+                  avgLength: values.reduce((sum, v) => sum + String(v).length, 0) / values.length,
+                  has3DigitCodes: values.some(v => /^\d{3}$/.test(String(v).trim())),
+                  smallNumbers: values.filter(v => {
+                    const num = Number(v);
+                    return Number.isFinite(num) && num >= 1 && num <= 1000;
+                  }).length,
+                  largeNumbers: values.filter(v => {
+                    const num = Number(v);
+                    return Number.isFinite(num) && num > 1000;
+                  }).length
+                };
+                columnStats.push(stats);
+              }
+              
+              // Identify store column first (most reliable)
+              const storeColumn = columnStats.find(s => s.has3DigitCodes);
+              if (storeColumn) storeCol = storeColumn.colIdx;
+              
+              // Identify item column (likely to have letters, longer, or large numbers)
+              const itemColumn = columnStats.find(s => 
+                s.colIdx !== storeCol && 
+                (s.hasLetters || s.avgLength > 6 || s.largeNumbers > s.smallNumbers)
+              );
+              if (itemColumn) itemCol = itemColumn.colIdx;
+              
+              // Identify quantity column (small numbers, all numeric, not item or store)
+              const qtyColumn = columnStats.find(s => 
+                s.colIdx !== storeCol && 
+                s.colIdx !== itemCol && 
+                s.allNumbers && 
+                s.smallNumbers > 0
+              );
+              if (qtyColumn) qtyCol = qtyColumn.colIdx;
+              
+              // Final fallback to original positions
+              if (itemCol === qtyCol || itemCol === storeCol || qtyCol === storeCol) {
+                itemCol = 0;
+                qtyCol = 1;
+                storeCol = 2;
+              }
+            }
           }
         } else {
           ({itemCol, qtyCol, storeCol, headerRow} = columnMapping);
@@ -1212,6 +1293,14 @@
         rows.forEach((row, idx) => {
           if (idx <= headerRow) return;
           
+          // Check if row contains "total" or "totals" in any cell
+          const rowText = row.join(' ').toLowerCase();
+          if (/\btotals?\b/.test(rowText)) {
+            skipped++;
+            errors.push(`Row ${idx + 1}: Skipped totals row`);
+            return;
+          }
+          
           const itemNumber = String(row[itemCol] || '').trim();
           const quantityRaw = row[qtyCol];
           const storeIdentifierRaw = String(row[storeCol] || '').trim();
@@ -1222,7 +1311,12 @@
           
           if (!itemNumber || !Number.isFinite(quantity) || quantity <= 0 || !storeIdentifier) {
             if (itemNumber || quantityRaw || storeIdentifier) {
-              skipped++; errors.push(`Row ${idx + 1}: Invalid data`);
+              skipped++; 
+              let errorDetail = `Row ${idx + 1}:`;
+              if (!itemNumber) errorDetail += ` Missing item`;
+              if (!Number.isFinite(quantity) || quantity <= 0) errorDetail += ` Invalid qty(${quantityRaw})`;
+              if (!storeIdentifier) errorDetail += ` Missing store`;
+              errors.push(errorDetail);
             }
             return;
           }
@@ -1251,13 +1345,15 @@
         let statusMsg = `✅ Imported ${imported} items from "${sheetName}"`;
         if (skipped > 0) {
           statusMsg += ` (${skipped} rows skipped)`;
-          if (errors.length <= 5) {
+          if (errors.length <= 10) {
             statusMsg += `<div style="font-size: 11px; color: #666; margin-top: 5px;">Issues: ${errors.join('; ')}</div>`;
-          } else if (errors.length > 5) {
-            statusMsg += `<div style="font-size: 11px; color: #666; margin-top: 5px;">${errors.length} rows had issues</div>`;
+          } else {
+            statusMsg += `<div style="font-size: 11px; color: #666; margin-top: 5px;">${errors.length} rows had issues. First 10: ${errors.slice(0, 10).join('; ')}</div>`;
           }
         }
         
+        // Add debug info about detected columns
+        statusMsg += `<div style="font-size:11px;color:#888;margin-top:6px;">Columns used - Item:${itemCol+1}, Qty:${qtyCol+1}, Store:${storeCol+1} (Header row: ${headerRow+1})</div>`;
         statusMsg += debugOutput;
         
         $('fileStatus').innerHTML = statusMsg;
@@ -1298,6 +1394,7 @@
                 <select id="${['item', 'qty', 'store'][i]}ColSelect" style="width: 100%; padding: 4px;">
                   ${rows[0].map((_, idx) => `<option value="${idx}" ${idx === i ? 'selected' : ''}>Column ${String.fromCharCode(65 + idx)} (${String(rows[0][idx]).substring(0, 10)})</option>`).join('')}
                 </select>
+                ${i === 1 ? '<div class="colmap-note" style="font-size: 10px; color: #666; margin-top: 2px;">Looks for: qty, quantity, allocations, order, amount, units</div>' : ''}
                 ${i === 2 ? '<div class="colmap-note" style="font-size: 10px; color: #666; margin-top: 2px;">Accepts store codes or names</div>' : ''}
               </div>
             `).join('')}
